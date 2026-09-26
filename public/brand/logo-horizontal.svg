@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 144" role="img" aria-labelledby="title">
+  <title id="title">Pawn Shop logo</title>
+  <svg x="0" y="0" width="144" height="144" viewBox="0 0 64 64">
+    <rect width="64" height="64" rx="17" fill="#ac492e"/>
+    <g fill="#fff">
+      <circle cx="32" cy="13" r="7"/>
+      <circle cx="18" cy="24" r="7"/>
+      <circle cx="46" cy="24" r="7"/>
+      <rect x="12" y="22" width="40" height="36" rx="13"/>
+    </g>
+    <g fill="#ac492e">
+      <circle cx="25" cy="39" r="2.5"/>
+      <circle cx="39" cy="39" r="2.5"/>
+    </g>
+    <path d="M26 47c3.2 3.5 8.8 3.5 12 0" fill="none" stroke="#ac492e" stroke-linecap="round" stroke-width="3.2"/>
+  </svg>
+  <text x="171" y="101" fill="#1c2925" font-family="Sora, Arial, sans-serif" font-size="80" font-weight="700" letter-spacing="-4.5">pawn shop.</text>
+</svg>

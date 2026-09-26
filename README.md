@@ -1,8 +1,12 @@
 # Pawn Shop
 
+![Pawn Shop cover](public/brand/cover.jpg)
+
 A Sepolia demo lending market for simulated vaulted collectible cards. The in-app How it works dialog covers the borrower and lender flows; a [direct-link guide](http://localhost:3000/docs) remains available. This README records the implementation and integration details. The interface uses Next.js 16, shadcn-style neutral components, Reown AppKit, Drizzle, and SQLite. Contracts use Hardhat 3 and OpenZeppelin. MockUSDC is a valueless test token; the seeded cards are simulated custody receipts.
 
 Pawn Shop is the consumer name. Previously deployed contract names, World action IDs, and ENS records still use Collector Credit identifiers so existing testnet integrations continue to work.
+
+Brand assets are in [`public/brand`](public/brand): the cover image, square mascot icon, and horizontal logos for light and dark backgrounds. Use the SVG files for scalable placements and PNG files where raster artwork is required.
 
 ## Local setup
 

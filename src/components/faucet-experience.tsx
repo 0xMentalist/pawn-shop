@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAppKit } from "@reown/appkit/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ExternalLink, Search } from "lucide-react";
@@ -23,6 +24,7 @@ export function FaucetExperience({ cards, refreshError }: { cards: FaucetCard[];
   const router = useRouter();
   const { address, isConnected, chainId } = useAccount();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
+  const { open: openWallet } = useAppKit();
   const { writeContractAsync } = useWriteContract();
   const chain = usePublicClient({ chainId: SEPOLIA_CHAIN_ID });
   const onSepolia = isConnected && chainId === SEPOLIA_CHAIN_ID;
@@ -85,6 +87,24 @@ export function FaucetExperience({ cards, refreshError }: { cards: FaucetCard[];
     finally { setClaimingId(null); }
   }
 
+  async function prepareCardClaim(card: FaucetCard) {
+    if (!isConnected) {
+      try { await openWallet(); }
+      catch (error) { setClaimError(error instanceof Error ? error.message.split("\n")[0] : "Could not open wallet connection."); }
+      return;
+    }
+    if (!onSepolia) {
+      try { await switchChainAsync({ chainId: SEPOLIA_CHAIN_ID }); }
+      catch (error) { setClaimError(error instanceof Error ? error.message.split("\n")[0] : "Could not switch to Sepolia."); }
+      return;
+    }
+    if (typeof claimedCount.data !== "bigint") {
+      await claimedCount.refetch();
+      return;
+    }
+    await claimCard(card);
+  }
+
   return <div className="space-y-10">
     <div><h1 className="font-display text-5xl font-semibold tracking-tight md:text-6xl">Start with a card.</h1><p className="mt-4 max-w-2xl text-lg leading-8 text-muted-foreground">Pick a demo card, claim test funds, and try Pawn Shop with your wallet.</p></div>
 
@@ -112,7 +132,9 @@ export function FaucetExperience({ cards, refreshError }: { cards: FaucetCard[];
       {visibleCards.length === 0 ? <div className="rounded-2xl border bg-card p-10 text-center"><p className="font-display text-xl font-semibold">{available === 0 ? "All 40 cards have been claimed." : "No cards match your search."}</p><p className="mt-2 text-sm text-muted-foreground">{available === 0 ? "You can still claim MockUSDC and explore lending." : "Try a different name or show all cards."}</p>{query ? <Button type="button" variant="outline" className="mt-5" onClick={() => setQuery("")}>Clear search</Button> : null}</div> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{visibleCards.map((card) => {
         const isClaimed = card.claimed || claimedHere.includes(card.id);
         const atLimit = typeof claimedCount.data === "bigint" && claimedCount.data >= 3n;
-        return <article key={card.id} className="flex flex-col overflow-hidden rounded-2xl border bg-card"><div className="flex h-56 items-center justify-center bg-secondary p-4"><img src={card.imageUrl} alt={`${card.name} Base Set card artwork`} width={164} height={226} loading="lazy" className="h-full w-auto max-w-full object-contain drop-shadow-sm" /></div><div className="flex flex-1 flex-col p-5"><div className="flex items-baseline justify-between gap-2"><h3 className="font-display text-xl font-semibold">{card.name}</h3><span className="font-serial text-xs text-muted-foreground">#{String(card.id.slice(-3))}</span></div><p className="mt-1 text-sm text-muted-foreground">Base Set · Demo PSA {card.grade} · {card.printing.split(" #")[0]}</p><p className="mt-5 text-sm text-muted-foreground">PSA guide estimate</p><p className="font-display text-2xl font-semibold tabular-nums">{formatUsdc(card.valueMicroUsdc)}</p><Button type="button" variant={isClaimed ? "outline" : "default"} className="mt-5 w-full" disabled={isClaimed || !onSepolia || !contracts.cardFaucet || Boolean(claimingId) || atLimit || gasMissing || typeof claimedCount.data !== "bigint"} aria-busy={claimingId === card.id} onClick={() => void claimCard(card)}>{isClaimed ? "Claimed" : claimingId === card.id ? "Claiming…" : onSepolia && claimedCount.isPending ? "Checking…" : atLimit ? "Limit reached" : "Claim card"}</Button></div></article>;
+        const claimLabel = isClaimed ? "Claimed" : claimingId === card.id ? "Claiming…" : !contracts.cardFaucet ? "Claims unavailable" : !isConnected ? "Connect wallet to claim" : !onSepolia ? "Switch to Sepolia" : atLimit ? "Limit reached" : gasMissing ? "Need Sepolia ETH" : claimedCount.isPending ? "Checking limit…" : typeof claimedCount.data !== "bigint" ? "Retry claim check" : "Claim card";
+        const claimDisabled = isClaimed || !contracts.cardFaucet || Boolean(claimingId) || switching || atLimit || gasMissing || (onSepolia && claimedCount.isPending);
+        return <article key={card.id} className="flex flex-col overflow-hidden rounded-2xl border bg-card"><div className="flex h-56 items-center justify-center bg-secondary p-4"><img src={card.imageUrl} alt={`${card.name} Base Set card artwork`} width={164} height={226} loading="lazy" className="h-full w-auto max-w-full object-contain drop-shadow-sm" /></div><div className="flex flex-1 flex-col p-5"><div className="flex items-baseline justify-between gap-2"><h3 className="font-display text-xl font-semibold">{card.name}</h3><span className="font-serial text-xs text-muted-foreground">#{String(card.id.slice(-3))}</span></div><p className="mt-1 text-sm text-muted-foreground">Base Set · Demo PSA {card.grade} · {card.printing.split(" #")[0]}</p><p className="mt-5 text-sm text-muted-foreground">PSA guide estimate</p><p className="font-display text-2xl font-semibold tabular-nums">{formatUsdc(card.valueMicroUsdc)}</p><Button type="button" variant={isClaimed ? "outline" : "default"} className="mt-5 w-full" disabled={claimDisabled} aria-busy={claimingId === card.id} onClick={() => void prepareCardClaim(card)}>{claimLabel}</Button></div></article>;
       })}</div>}
     </section>
   </div>;

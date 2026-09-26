@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import { BorrowFlow } from "@/components/borrow-flow";
 import { getDemoCards } from "@/lib/data";
 import { getDemoCardEvidence } from "@/lib/demo-cards";
+import { syncFaucetCards } from "@/lib/faucet-sync";
 
 export const metadata: Metadata = { title: "Borrow" };
 export const dynamic = "force-dynamic";
 
 export default async function BorrowPage() {
+  try { await syncFaucetCards(); }
+  catch (error) { console.error("Could not sync card faucet for Borrow", error); }
   const records = await getDemoCards();
   const worldConfig = process.env.WORLD_APP_ID && process.env.WORLD_RP_ID && ["production", "staging"].includes(process.env.WORLD_ENVIRONMENT ?? "")
     ? { appId: process.env.WORLD_APP_ID, rpId: process.env.WORLD_RP_ID, environment: process.env.WORLD_ENVIRONMENT as "production" | "staging" }
@@ -15,7 +18,7 @@ export default async function BorrowPage() {
     <BorrowFlow assets={records.map(({ card, valuation }) => {
       const evidence = getDemoCardEvidence(card.id);
       if (!evidence) throw new Error(`Missing card evidence for ${card.id}`);
-      return { id: card.id, name: card.name, setName: card.setName, printing: evidence.printing, year: card.year, grader: card.grader, grade: card.grade, psaReferenceNumber: evidence.psaReferenceNumber, tokenId: card.tokenId, imageUrl: evidence.imageUrl, saleObservedAt: evidence.saleObservedAt, saleSourceUrl: evidence.saleSourceUrl, valueMicroUsdc: valuation.appraisedMicroUsdc };
+      return { id: card.id, name: card.name, setName: card.setName, printing: evidence.printing, year: card.year, grader: card.grader, grade: card.grade, psaReferenceNumber: evidence.psaReferenceNumber, tokenId: card.tokenId, imageUrl: evidence.imageUrl, saleObservedAt: evidence.saleObservedAt, saleSourceUrl: evidence.saleSourceUrl, priceSource: "sourceType" in evidence ? evidence.sourceType : "psa-auction-comparable", valueMicroUsdc: valuation.appraisedMicroUsdc };
     })} worldConfig={worldConfig} />
   </main>;
 }

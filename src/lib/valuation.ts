@@ -20,9 +20,9 @@ export async function issueSignedValuation(cardId: string) {
   if (!record.card.tokenId || !record.card.tokenContract) throw new ValuationError(409, "The demo card must be minted on Sepolia before a signed valuation is available.");
   let sale;
   try { sale = createDemoPrice(cardId, record.valuation.appraisedMicroUsdc); }
-  catch { throw new ValuationError(409, "The last-sale estimate needs to be synchronized before quoting."); }
-  if (record.valuation.lastSaleMicroUsdc !== sale.lastSaleMicroUsdc) throw new ValuationError(409, "The stored last sale does not match this card's quote.");
-  if (!sale.freshForSignedQuote) throw new ValuationError(410, "The last recorded sale is too old for a loan quote.");
+  catch { throw new ValuationError(409, "The PSA estimate needs to be synchronized before quoting."); }
+  if (record.valuation.lastSaleMicroUsdc !== sale.lastSaleMicroUsdc) throw new ValuationError(409, "The stored estimate does not match this card's quote.");
+  if (!sale.freshForSignedQuote) throw new ValuationError(410, "The PSA estimate is too old for a loan quote.");
 
   const currency = process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS;
   const verifier = process.env.NEXT_PUBLIC_VALUATION_VERIFIER_ADDRESS;
@@ -82,7 +82,7 @@ export async function issueSignedValuation(cardId: string) {
       fixtureUpdatedAt: record.valuation.updatedAt.toISOString(),
       saleObservedAt: sale.saleObservedAt,
       saleSourceUrl: sale.saleSourceUrl,
-      source: "PSA recorded auction comparable",
+      source: sale.source === "psa-price-guide" ? "PSA price guide estimate" : "PSA recorded auction comparable",
     },
   };
 }

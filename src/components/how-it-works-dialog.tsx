@@ -15,7 +15,7 @@ const borrowSteps = [
 ];
 
 const earnSteps = [
-  { title: "Get test funds", detail: "Connect on Sepolia and claim MockUSDC from the faucet." },
+  { title: "Get test funds", detail: "Visit Faucet to claim MockUSDC on Sepolia." },
   { title: "Supply", detail: "Choose an amount to supply to the lending pool." },
   { title: "Track and withdraw", detail: "Your pool shares track your position. Withdraw when funds are available." },
 ];

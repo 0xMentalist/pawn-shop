@@ -10,9 +10,9 @@ export async function GET(request: Request) {
   try {
     const record = await getDemoCard(cardId);
     if (!record) return NextResponse.json({ error: "Card not found." }, { status: 404, headers: { "Cache-Control": "no-store" } });
-    if (!record?.valuation) return NextResponse.json({ error: "The last-sale estimate is not configured." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    if (!record?.valuation) return NextResponse.json({ error: "The PSA estimate is not configured." }, { status: 503, headers: { "Cache-Control": "no-store" } });
     return NextResponse.json(createDemoPrice(cardId, record.valuation.appraisedMicroUsdc), { headers: { "Cache-Control": "no-store" } });
   } catch {
-    return NextResponse.json({ error: "Could not load the last-sale estimate." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ error: "Could not load the PSA estimate." }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
 }

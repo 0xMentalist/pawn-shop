@@ -22,6 +22,7 @@
     "deploy:pause-previous": "node --import tsx scripts/pause-previous-originations.ts",
     "card:mint-demo": "node --import tsx scripts/mint-demo-card.ts",
     "card:mint-portfolio": "node --import tsx scripts/mint-demo-portfolio.ts",
+    "card:faucet:deploy": "node --import tsx scripts/deploy-card-faucet.ts",
     "ens:check": "node --import tsx scripts/register-ens-sepolia.ts --check",
     "ens:register": "node --import tsx scripts/register-ens-sepolia.ts --register",
     "ens:verify": "node --import tsx scripts/check-ens-roles.ts",

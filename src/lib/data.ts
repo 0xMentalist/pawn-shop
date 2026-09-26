@@ -3,10 +3,10 @@ import "server-only";
 import { readFile, readdir } from "node:fs/promises";
 import { createPublicClient, http, parseAbi } from "viem";
 import { sepolia } from "viem/chains";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { cards, chainEvents, valuationFixtures } from "@/db/schema";
-import { DEMO_CARDS, isDemoCardId } from "@/lib/demo-cards";
+import { isDemoCardId } from "@/lib/demo-cards";
 import { auctionMarkets, discoverAuctionListings, type AuctionDeployment, type AuctionState } from "@/lib/auction-discovery";
 
 export async function getDemoCard(cardId = "demo-charizard-001") {
@@ -18,8 +18,9 @@ export async function getDemoCard(cardId = "demo-charizard-001") {
 }
 
 export async function getDemoCards() {
-  const records = await Promise.all(DEMO_CARDS.map((card) => getDemoCard(card.id)));
-  return records.flatMap((record) => record?.valuation ? [{ card: record.card, valuation: record.valuation }] : []);
+  const records = await db.select({ card: cards, valuation: valuationFixtures }).from(cards)
+    .innerJoin(valuationFixtures, eq(cards.id, valuationFixtures.cardId)).where(isNotNull(cards.tokenId));
+  return records.filter((record) => isDemoCardId(record.card.id));
 }
 
 export async function getActivity() {

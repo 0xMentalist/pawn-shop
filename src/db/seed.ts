@@ -3,14 +3,14 @@ import { drizzle } from "drizzle-orm/libsql";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { cards, valuationFixtures } from "./schema";
-import { DEMO_CARDS } from "../lib/demo-cards";
+import { CATALOG_CARDS } from "../lib/demo-cards";
 
 const url = process.env.DATABASE_URL ?? "file:./data/collector-credit.db";
 if (url.startsWith("file:")) mkdirSync(dirname(resolve(url.slice(5))), { recursive: true });
 const client = createClient({ url });
 const db = drizzle(client);
 
-for (const card of DEMO_CARDS) {
+for (const card of CATALOG_CARDS) {
   await db.insert(cards).values({
     id: card.id,
     name: card.name,
@@ -42,4 +42,4 @@ for (const card of DEMO_CARDS) {
 }
 
 await client.close();
-console.log("Seeded the simulated cards and grade-matched last-auction-sale snapshots.");
+console.log("Seeded simulated cards with PSA auction and price guide estimates.");

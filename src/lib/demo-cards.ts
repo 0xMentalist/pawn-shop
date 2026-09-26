@@ -1,3 +1,5 @@
+import { FAUCET_CARDS } from "./faucet-cards";
+
 /** Simulated Sepolia NFTs with curated, grade-matched auction comparables. */
 export const DEMO_CARDS = [
   { id: "demo-pikachu-010", name: "Pikachu", setName: "Scarlet & Violet", printing: "Black Star Promo #027 · Paldea Evolved ETB", year: 2023, grader: "PSA", grade: "8", certificationNumber: "DEMO-CC-003", psaReferenceNumber: "115823683", imageUrl: "https://images.pokemontcg.io/svp/27.png", valueMicroUsdc: 31_000_000, saleObservedAt: "2026-08-02T00:00:00.000Z", saleSourceUrl: "https://www.psacard.com/cert/115823683/psa" },
@@ -9,8 +11,10 @@ export const DEMO_CARDS = [
   { id: "demo-venusaur-008", name: "Venusaur", setName: "Base Set", printing: "Unlimited holo #15", year: 1999, grader: "PSA", grade: "9", certificationNumber: "DEMO-CC-008", psaReferenceNumber: "71266335", imageUrl: "https://images.pokemontcg.io/base1/15.png", valueMicroUsdc: 640_000_000, saleObservedAt: "2026-09-24T00:00:00.000Z", saleSourceUrl: "https://www.psacard.com/cert/71266335/psa" },
 ] as const;
 
+export const CATALOG_CARDS = [...DEMO_CARDS, ...FAUCET_CARDS];
+
 export function getDemoCardEvidence(value: string) {
-  return DEMO_CARDS.find((card) => card.id === value);
+  return CATALOG_CARDS.find((card) => card.id === value);
 }
 
 export function isDemoCardId(value: string): boolean {

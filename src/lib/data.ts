@@ -1,12 +1,13 @@
 import "server-only";
 
-import { readFile } from "node:fs/promises";
-import { createPublicClient, http, parseAbi, type Address } from "viem";
+import { readFile, readdir } from "node:fs/promises";
+import { createPublicClient, http, parseAbi } from "viem";
 import { sepolia } from "viem/chains";
-import { and, desc, eq, gte, inArray } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { cards, chainEvents, valuationFixtures } from "@/db/schema";
 import { DEMO_CARDS, isDemoCardId } from "@/lib/demo-cards";
+import { auctionMarkets, discoverAuctionListings, type AuctionDeployment, type AuctionState } from "@/lib/auction-discovery";
 
 export async function getDemoCard(cardId = "demo-charizard-001") {
   if (!isDemoCardId(cardId)) return null;
@@ -25,58 +26,41 @@ export async function getActivity() {
   return db.select().from(chainEvents).orderBy(desc(chainEvents.blockNumber), desc(chainEvents.logIndex)).limit(50);
 }
 
-export async function getAuctionLoanIds() {
-  const deployment = JSON.parse(await readFile("deployments/sepolia.json", "utf8")) as {
-    chainId: number; contracts: { LiquidationAuction?: Address; LoanManager?: Address };
-  };
-  const auction = deployment.contracts.LiquidationAuction;
-  const manager = deployment.contracts.LoanManager;
-  if (deployment.chainId !== sepolia.id || !auction || !manager) return [];
+export async function getAuctionListings() {
+  let archiveFiles: string[] = [];
+  try { archiveFiles = (await readdir("deployments/archive")).filter((file) => file.endsWith(".json")).map((file) => `deployments/archive/${file}`); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+  const deploymentFiles = ["deployments/sepolia.json", "deployments/sepolia-previous.json", ...archiveFiles];
+  const deployments: AuctionDeployment[] = [];
+  for (const file of deploymentFiles) {
+    try { deployments.push(JSON.parse(await readFile(file, "utf8")) as AuctionDeployment); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+  }
+  const markets = auctionMarkets(deployments, sepolia.id);
+  if (markets.length === 0) throw new Error("No Sepolia auction markets are configured");
   const client = createPublicClient({ chain: sepolia, transport: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL) });
   const abi = parseAbi([
     "function nextLoanId() view returns (uint256)",
     "function auctions(uint256) view returns (uint256,uint256,address,uint64,address,uint256,bool)",
   ]);
-  const nextLoanId = await client.readContract({ address: manager, abi, functionName: "nextLoanId" });
-  const ids: string[] = [];
-  for (let upper = nextLoanId - 1n; upper > 0n && ids.length < 50;) {
-    const lower = upper > 49n ? upper - 49n : 1n;
-    const batch = Array.from({ length: Number(upper - lower + 1n) }, (_, index) => upper - BigInt(index));
-    const auctions = await client.multicall({
-      contracts: batch.map((loanId) => ({ address: auction, abi, functionName: "auctions" as const, args: [loanId] })),
-      allowFailure: false,
-    });
-    for (const [index, details] of auctions.entries()) {
-      if (details[3] !== 0n && !details[6]) ids.push(batch[index].toString());
-      if (ids.length === 50) break;
-    }
-    upper = lower - 1n;
-  }
-  return ids;
-}
-
-export async function getCachedAuctionLoanIds() {
-  const deployment = JSON.parse(await readFile("deployments/sepolia.json", "utf8")) as {
-    chainId: number; blockNumbers?: { LiquidationAuction?: number };
-  };
-  const deployedAt = deployment.blockNumbers?.LiquidationAuction;
-  if (deployment.chainId !== sepolia.id || !Number.isSafeInteger(deployedAt)) return [];
-  const events = await db.select({ loanId: chainEvents.loanId, eventName: chainEvents.eventName })
-    .from(chainEvents)
-    .where(and(
-      eq(chainEvents.chainId, sepolia.id),
-      gte(chainEvents.blockNumber, deployedAt!),
-      inArray(chainEvents.eventName, ["AuctionStarted", "AuctionSettled"]),
-    ))
-    .orderBy(desc(chainEvents.blockNumber), desc(chainEvents.logIndex))
-    .limit(500);
-  const seen = new Set<string>();
-  const ids: string[] = [];
-  for (const event of events) {
-    if (!event.loanId || seen.has(event.loanId)) continue;
-    seen.add(event.loanId);
-    if (event.eventName === "AuctionStarted") ids.push(event.loanId);
-    if (ids.length === 50) break;
-  }
-  return ids;
+  return discoverAuctionListings(markets, {
+    nextLoanId: (managerAddress) => client.readContract({ address: managerAddress, abi, functionName: "nextLoanId" }),
+    auctionStates: async (auctionAddress, loanIds) => {
+      const contracts = loanIds.map((loanId) => ({ address: auctionAddress, abi, functionName: "auctions" as const, args: [loanId] as const }));
+      let results: (AuctionState | null)[];
+      try {
+        const batches = await client.multicall({ contracts, allowFailure: true });
+        results = await Promise.all(batches.map(async (batch, index) => {
+          const details = batch.status === "success" ? batch.result : await client.readContract(contracts[index]);
+          return { endsAt: details[3], settled: details[6] };
+        }));
+      } catch {
+        results = await Promise.all(contracts.map(async (contract) => {
+          const details = await client.readContract(contract);
+          return { endsAt: details[3], settled: details[6] };
+        }));
+      }
+      return results;
+    },
+  });
 }

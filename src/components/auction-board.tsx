@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { parseUnits, zeroAddress, type Hex } from "viem";
+import { useRouter } from "next/navigation";
+import { parseUnits, zeroAddress, type Address, type Hex } from "viem";
 import { useAccount, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,23 +11,25 @@ import { abis, contracts, SEPOLIA_CHAIN_ID } from "@/lib/contracts";
 import { formatUsdc } from "@/lib/loan-math";
 
 type AuctionCard = { name: string; grade: string; imageUrl: string; psaReferenceNumber: string; saleSourceUrl: string };
+type AuctionRef = { loanId: string; auctionAddress: Address };
 
-export function AuctionBoard({ loanIds, cards }: { loanIds: string[]; cards: Record<string, AuctionCard> }) {
-  return <div className="grid gap-4">{loanIds.map((id) => <AuctionItem key={id} loanId={BigInt(id)} cards={cards} />)}</div>;
+export function AuctionBoard({ listings, cards }: { listings: AuctionRef[]; cards: Record<string, AuctionCard> }) {
+  return <div className="grid gap-4">{listings.map(({ loanId, auctionAddress }) => <AuctionItem key={`${auctionAddress}:${loanId}`} loanId={BigInt(loanId)} auctionAddress={auctionAddress} cards={cards} />)}</div>;
 }
 
-function AuctionItem({ loanId, cards }: { loanId: bigint; cards: Record<string, AuctionCard> }) {
+function AuctionItem({ loanId, auctionAddress, cards }: { loanId: bigint; auctionAddress: Address; cards: Record<string, AuctionCard> }) {
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [hash, setHash] = useState<Hex>();
   const [now, setNow] = useState(Date.now());
   const { address, isConnected, chainId } = useAccount();
+  const router = useRouter();
   const publicClient = usePublicClient({ chainId: SEPOLIA_CHAIN_ID });
   const { writeContractAsync } = useWriteContract();
-  const ready = Boolean(contracts.auction && contracts.mockUsdc && isConnected && chainId === SEPOLIA_CHAIN_ID && publicClient);
-  const auction = useReadContract({ address: contracts.auction, abi: abis.auction, functionName: "auctions", args: [loanId], chainId: SEPOLIA_CHAIN_ID, query: { enabled: Boolean(contracts.auction), refetchInterval: 15_000 } });
-  const minBid = useReadContract({ address: contracts.auction, abi: abis.auction, functionName: "minimumBid", args: [loanId], chainId: SEPOLIA_CHAIN_ID, query: { enabled: Boolean(contracts.auction), refetchInterval: 15_000 } });
+  const ready = Boolean(contracts.mockUsdc && isConnected && chainId === SEPOLIA_CHAIN_ID && publicClient);
+  const auction = useReadContract({ address: auctionAddress, abi: abis.auction, functionName: "auctions", args: [loanId], chainId: SEPOLIA_CHAIN_ID, query: { refetchInterval: 15_000 } });
+  const minBid = useReadContract({ address: auctionAddress, abi: abis.auction, functionName: "minimumBid", args: [loanId], chainId: SEPOLIA_CHAIN_ID, query: { refetchInterval: 15_000 } });
   const tokenBalance = useReadContract({ address: contracts.mockUsdc, abi: abis.mockUsdc, functionName: "balanceOf", args: [address ?? zeroAddress], chainId: SEPOLIA_CHAIN_ID, query: { enabled: ready, refetchInterval: 15_000 } });
   const details = Array.isArray(auction.data) ? auction.data : null;
   const card = details ? cards[String(details[0])] : undefined;
@@ -47,17 +50,17 @@ function AuctionItem({ loanId, cards }: { loanId: bigint; cards: Record<string, 
   }
 
   async function bid() {
-    if (!ready || !address || !publicClient || !contracts.auction || !contracts.mockUsdc || !entered || entered < minimum) return;
+    if (!ready || !address || !publicClient || !contracts.mockUsdc || !entered || entered < minimum) return;
     setBusy(true);
     setMessage("");
     try {
-      const allowance = await publicClient.readContract({ address: contracts.mockUsdc, abi: abis.mockUsdc, functionName: "allowance", args: [address, contracts.auction] });
+      const allowance = await publicClient.readContract({ address: contracts.mockUsdc, abi: abis.mockUsdc, functionName: "allowance", args: [address, auctionAddress] });
       if (typeof allowance !== "bigint" || allowance < entered) {
         setMessage("Approve MockUSDC for the bid in your wallet.");
-        await confirm(await writeContractAsync({ address: contracts.mockUsdc, abi: abis.mockUsdc, functionName: "approve", args: [contracts.auction, entered], chainId: SEPOLIA_CHAIN_ID }));
+        await confirm(await writeContractAsync({ address: contracts.mockUsdc, abi: abis.mockUsdc, functionName: "approve", args: [auctionAddress, entered], chainId: SEPOLIA_CHAIN_ID }));
       }
       setMessage("Confirm the auction bid in your wallet.");
-      await confirm(await writeContractAsync({ address: contracts.auction, abi: abis.auction, functionName: "bid", args: [loanId, entered], chainId: SEPOLIA_CHAIN_ID }));
+      await confirm(await writeContractAsync({ address: auctionAddress, abi: abis.auction, functionName: "bid", args: [loanId, entered], chainId: SEPOLIA_CHAIN_ID }));
       setAmount("");
       setMessage("Bid confirmed. The previous highest bidder was refunded.");
     } catch (error) { setMessage(error instanceof Error ? error.message.split("\n")[0] : "Bid failed."); }
@@ -65,12 +68,13 @@ function AuctionItem({ loanId, cards }: { loanId: bigint; cards: Record<string, 
   }
 
   async function settle() {
-    if (!ready || !contracts.auction) return;
+    if (!ready) return;
     setBusy(true);
     setMessage("");
     try {
-      await confirm(await writeContractAsync({ address: contracts.auction, abi: abis.auction, functionName: "settle", args: [loanId], chainId: SEPOLIA_CHAIN_ID }));
+      await confirm(await writeContractAsync({ address: auctionAddress, abi: abis.auction, functionName: "settle", args: [loanId], chainId: SEPOLIA_CHAIN_ID }));
       setMessage("Auction settled on Sepolia.");
+      router.refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message.split("\n")[0] : "Settlement failed."); }
     finally { setBusy(false); }
   }

@@ -14,7 +14,7 @@ export default function Home() {
       <div className="mx-auto grid max-w-7xl items-center gap-14 px-4 py-16 md:px-6 md:py-24 lg:grid-cols-[minmax(0,1fr)_minmax(0,.92fr)] lg:gap-20 lg:px-8 lg:py-28">
         <div>
           <p className="font-serial text-xs font-semibold uppercase tracking-widest text-primary">Collectible backed credit</p>
-          <h1 className="font-display mt-6 max-w-2xl text-5xl font-semibold leading-none md:text-6xl lg:text-7xl">Your collection has another move.</h1>
+          <h1 className="font-display mt-6 max-w-2xl text-5xl font-semibold leading-none md:text-6xl lg:text-7xl">Liquidity for cards, without selling it!</h1>
           <p className="mt-7 max-w-lg text-lg leading-8 text-muted-foreground">Borrow against a vaulted graded card with a clear price reference, straightforward terms, and a wallet you control.</p>
           <div className="mt-9 flex flex-wrap items-center gap-4">
             <Link href="/borrow" className={cn(buttonVariants({ size: "lg" }), "gap-3")}>Go to app<ArrowUpRight className="size-4" aria-hidden="true" /></Link>

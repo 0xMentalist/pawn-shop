@@ -10,6 +10,7 @@ const projectId = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID;
 const adapter = projectId ? new WagmiAdapter({ projectId, networks: [sepolia], ssr: true }) : null;
 const queryClient = new QueryClient();
 const fallbackConfig = createConfig({ chains: [sepolia], transports: { [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL) }, ssr: true });
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 if (projectId && adapter) {
   createAppKit({
@@ -18,10 +19,10 @@ if (projectId && adapter) {
     networks: [sepolia],
     defaultNetwork: sepolia,
     metadata: {
-      name: "Collector Credit",
-      description: "Credit backed by vaulted collectible cards",
-      url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-      icons: [],
+      name: "Prawn Shop",
+      description: "Keep your cards. Access their value.",
+      url: appUrl,
+      icons: [new URL("/icon.svg", appUrl).toString()],
     },
     features: { analytics: false },
   });

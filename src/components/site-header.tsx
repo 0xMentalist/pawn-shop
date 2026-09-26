@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { WalletButton } from "@/components/wallet-button";
+import { BrandMark } from "@/components/brand-mark";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -19,9 +20,9 @@ export function SiteHeader() {
   const landing = pathname === "/";
   return <header className="border-b border-border bg-card">
     <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 md:px-6 lg:px-8">
-      <Link href="/" className="inline-flex min-h-10 items-center gap-3 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card" aria-label="Collector Credit home">
-        <span className="font-serial flex size-9 items-center justify-center border border-primary text-sm font-semibold text-primary" aria-hidden="true">CC</span>
-        <span className="font-display text-lg font-semibold tracking-tight">Collector Credit</span>
+      <Link href="/" className="inline-flex min-h-10 items-center gap-3 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card" aria-label="Prawn Shop home">
+        <BrandMark />
+        <span className="font-display text-lg font-semibold tracking-tight">Prawn Shop</span>
       </Link>
       {landing ? <nav aria-label="Main navigation" className="ml-auto flex items-center gap-3 sm:gap-6"><a href="#how-it-works" className="hidden min-h-10 items-center text-sm font-medium text-muted-foreground hover:text-foreground sm:inline-flex">How it works</a><Link href="/borrow" className={cn(buttonVariants({ size: "sm" }), "gap-2")}>Go to app<ArrowUpRight className="size-4" aria-hidden="true" /></Link></nav> : <>
         <div className="order-2 ml-auto flex items-center lg:order-3"><WalletButton /></div>

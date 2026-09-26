@@ -19,6 +19,7 @@
   --warning: oklch(0.88 0.08 85);
   --warning-foreground: oklch(0.25 0.05 70);
   --destructive: oklch(0.46 0.18 26);
+  --brand-coral: #b84d3b;
 }
 
 .dark {
@@ -40,6 +41,7 @@
   --warning: oklch(0.4 0.06 85);
   --warning-foreground: oklch(0.95 0.04 85);
   --destructive: oklch(0.74 0.13 25);
+  --brand-coral: #d9725d;
 }
 
 @theme inline {
@@ -65,6 +67,7 @@
 
 * { border-color: var(--border); }
 body { background: var(--background); color: var(--foreground); font-family: var(--font-plex), Arial, sans-serif; }
+.brand-mark { background: var(--brand-coral); color: white; }
 .font-display { font-family: var(--font-plex), Arial, sans-serif; letter-spacing: -0.035em; }
 .font-serial { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
 .collection-slot { transition: border-color 140ms ease-out, background-color 140ms ease-out, transform 140ms ease-out; }

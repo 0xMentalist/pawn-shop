@@ -8,8 +8,8 @@ import "./globals.css";
 const plex = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-plex", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "Collector Credit", template: "%s · Collector Credit" },
-  description: "Borrow MockUSDC on Sepolia against tokenized, vaulted graded cards.",
+  title: { default: "Prawn Shop", template: "%s · Prawn Shop" },
+  description: "Keep your cards. Access their value. Borrow against vaulted graded cards or earn by lending to collectors.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

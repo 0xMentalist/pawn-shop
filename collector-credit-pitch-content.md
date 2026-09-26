@@ -1,22 +1,22 @@
-# Collector Credit: ETHGlobal Tokyo Pitch Deck Content
+# Prawn Shop: ETHGlobal Tokyo Pitch Deck Content
 
 **Format:** 8 slides, 3-minute pitch  
 **Narrative:** Problem-Agitate-Solve with a live product proof  
 **Audience:** Hackathon judges  
 
-## Slide 1: Collector Credit
+## Slide 1: Prawn Shop
 
 ### On slide
 
-**Keep the card. Unlock the cash.**
+**Keep your cards. Access their value.**
 
-Instant USDC loans backed by tokenized, vaulted graded cards.
+Test loans backed by tokenized, vaulted graded cards.
 
 `Pokemon collateral` `Sepolia` `Working credit lifecycle`
 
 ### Speaker notes
 
-“This Charizard may be worth $10,000, but its owner has to sell it to access a dollar. Collector Credit lets them borrow against it instead.”
+“This Charizard may be worth $10,000, but its owner has to sell it to access a dollar. Prawn Shop lets them borrow against it instead.”
 
 Do not begin with sponsor names or architecture. Establish the human outcome first.
 
@@ -138,7 +138,7 @@ Explain that auction shortfalls lower the pool share price. Overcollateralizatio
 | Courtyard | Yes | No | Platform KYC | No | No |
 | Slab.Finance | Yes | Yes | No | No | Yes |
 | MLKY | Existing issuers | Yes | No | No | Described |
-| Collector Credit | Demo asset | Yes | World ID | ENSv2 | Yes |
+| Prawn Shop | Demo asset | Yes | World ID | ENSv2 | Yes |
 
 ### Speaker notes
 
@@ -148,7 +148,7 @@ Do not claim durable competitive advantage yet. This is differentiated execution
 
 ### Objection prep
 
-**Is this just Slab.Finance again?** The core lending primitive overlaps. Collector Credit differentiates through an identity and permission model designed for real-world operators, pooled lender transparency, and a judge-visible end-to-end servicing workflow. The strongest answer is the live demo, not rhetoric.
+**Is this just Slab.Finance again?** The core lending primitive overlaps. Prawn Shop differentiates through an identity and permission model designed for real-world operators, pooled lender transparency, and a judge-visible end-to-end servicing workflow. The strongest answer is the live demo, not rhetoric.
 
 ## Slide 8: From Collectible to Collateral
 
@@ -166,7 +166,7 @@ Team: **[TBD names]**
 
 ### Speaker notes
 
-“Today we demonstrated one card, one pool, and every outcome from origination to liquidation. Collector Credit is the missing credit layer for tokenized alternative assets.”
+“Today we demonstrated one card, one pool, and every outcome from origination to liquidation. Prawn Shop is the missing credit layer for tokenized alternative assets.”
 
 The hackathon ask is simple: try the demo and inspect the Sepolia transactions.
 
@@ -236,4 +236,3 @@ Real on Sepolia: ownership, escrow, pool accounting, loan state, repayment, defa
 | Completeness | 5/10 | PRD is complete; deployed product and fallback video remain TBD. |
 | Crypto necessity | 8/10 | Onchain custody, pooled capital, permissions, and deterministic auction settlement are concrete. |
 | Presentation | 8/10 | Tight narrative; needs real screenshots, URLs, team, and transaction evidence. |
-

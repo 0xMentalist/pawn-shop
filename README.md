@@ -1,6 +1,8 @@
-# Collector Credit
+# Prawn Shop
 
 A Sepolia demo lending market for simulated vaulted collectible cards. The in-app [How it works](http://localhost:3000/docs) page covers the user flow; this README records the implementation and integration details. The interface uses Next.js 16, shadcn-style neutral components, Reown AppKit, Drizzle, and SQLite. Contracts use Hardhat 3 and OpenZeppelin. MockUSDC is a valueless test token; the seeded cards are simulated custody receipts.
+
+Prawn Shop is the consumer name. Previously deployed contract names, World action IDs, and ENS records still use Collector Credit identifiers so existing testnet integrations continue to work.
 
 ## Local setup
 

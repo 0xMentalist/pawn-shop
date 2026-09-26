@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BorrowActions } from "@/components/borrow-actions";
 import { WalletButton } from "@/components/wallet-button";
+import { BrandMark } from "@/components/brand-mark";
 import { abis, contracts, SEPOLIA_CHAIN_ID } from "@/lib/contracts";
 import { cardCustodyStatus } from "@/lib/card-custody";
 import type { DemoPrice } from "@/lib/demo-price";
@@ -46,7 +47,7 @@ export function BorrowFlow({ assets, worldConfig }: { assets: Asset[]; worldConf
   });
 
   if (status === "reconnecting" || (isConnected && !address)) return <div className="mx-auto max-w-xl py-20 text-center"><h1 className="font-display text-4xl font-semibold">Your cards</h1><p className="mt-3 text-muted-foreground">Finding your wallet…</p></div>;
-  if (!isConnected) return <div className="mx-auto max-w-3xl py-16 text-center md:py-24"><div className="font-serial mx-auto mb-8 flex size-14 items-center justify-center border border-primary text-2xl font-semibold text-primary" aria-hidden="true">C</div><h1 className="font-display text-4xl font-semibold leading-tight md:text-5xl">Get a loan on your cards or earn by lending to fellow collectors</h1><div className="mt-8 flex justify-center"><WalletButton /></div></div>;
+  if (!isConnected) return <div className="mx-auto max-w-3xl py-16 text-center md:py-24"><BrandMark className="mx-auto mb-8 size-14" /><h1 className="font-display text-4xl font-semibold leading-tight md:text-5xl">Get a loan on your cards or earn by lending to fellow collectors</h1><div className="mt-8 flex justify-center"><WalletButton /></div></div>;
   if (!contracts.card || !contracts.manager || !publicClient) return <div className="py-16 text-center"><h1 className="font-display text-4xl font-semibold">Your cards</h1><p role="alert" className="mt-4 text-muted-foreground">The card service is temporarily unavailable.</p></div>;
   if (inventory.isPending) return <div className="py-16 text-center" aria-busy="true"><h1 className="font-display text-4xl font-semibold">Your cards</h1><p className="mt-4 text-muted-foreground">Checking cards on Sepolia…</p></div>;
   if (inventory.isError) return <div className="py-16 text-center"><h1 className="font-display text-4xl font-semibold">Your cards</h1><p role="alert" className="mt-4 text-muted-foreground">Could not check your cards on Sepolia.</p><Button type="button" variant="outline" className="mt-6" onClick={() => void inventory.refetch()}>Try again</Button></div>;

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": { "node": "24.x" },
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
@@ -11,6 +12,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "node --import tsx src/db/seed.ts",
+    "db:import-demo": "node --import tsx scripts/import-demo-db.ts",
     "db:studio": "drizzle-kit studio",
     "contracts:compile": "hardhat compile",
     "contracts:test": "hardhat test solidity",

@@ -21,6 +21,23 @@ pnpm dev
 
 Set `NEXT_PUBLIC_REOWN_PROJECT_ID` in `.env.local` before connecting a wallet. The local database lives in `data/collector-credit.db` and is ignored by Git. Node 24 and pnpm 11.19.0 are pinned by `.nvmrc` and `packageManager`.
 
+## Vercel demo hosting
+
+The app uses SQLite tables for card metadata, demo valuations, World authorizations, and event indexes. Sepolia contracts remain the source of truth for tokens, loans, and auctions. Use a hosted Turso/libSQL database on Vercel; a local `file:` database would be ephemeral in a serverless function. The [Turso Vercel integration](https://vercel.com/marketplace/tursocloud/database) supplies `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`, which this app reads directly. Do not set the local `DATABASE_URL=file:...` value in Vercel.
+
+After connecting Turso, run the checked-in Drizzle migrations against the remote database, then import the current local demo records and seed any new catalog cards:
+
+```sh
+# Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in this shell first.
+pnpm db:migrate
+pnpm db:import-demo
+pnpm db:seed
+```
+
+The import copies only the six application tables and can be rerun. It preserves existing minted card token IDs and indexed activity. `SOURCE_DATABASE_URL` can point it at a different local SQLite file. Server-side production variables are `WORLD_RP_SIGNING_KEY`, `DEPLOYER_PRIVATE_KEY`, `APPRAISER_PRIVATE_KEY`, and `CURVEGRID_API_KEY`; keep them as sensitive Vercel variables. The public contract addresses, World app/RP IDs, Sepolia RPC URL, and Reown project ID are also needed at build time. Set `NEXT_PUBLIC_APP_URL=https://pawnshop.wtf`. `CURVEGRID_WEBHOOK_SECRET` is required only after registering the public `/api/curvegrid/webhook` URL with MultiBaas.
+
+Connect the GitHub repository to the Vercel project for deployments from `main`. Both `pawnshop.wtf` and `www.pawnshop.wtf` should be assigned to that project. At the domain registrar, use the exact A and CNAME records shown by `vercel domains verify`; check again after DNS propagates. Add the production origin to the Reown project allowlist if one is enabled, and update the World app's website URL to the live domain.
+
 ## Checks
 
 ```sh

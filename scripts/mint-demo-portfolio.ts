@@ -22,7 +22,10 @@ const cardAddress: Address = deployedCardAddress;
 const cardAbi = (JSON.parse(await readFile("artifacts/contracts/VaultedCardNFT.sol/VaultedCardNFT.json", "utf8")) as { abi: Abi }).abi;
 const publicClient = createPublicClient({ chain: sepolia, transport: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL) });
 const walletClient = createWalletClient({ account: privateKeyToAccount(key), chain: sepolia, transport: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL) });
-const client = createClient({ url: process.env.DATABASE_URL ?? "file:./data/collector-credit.db" });
+const client = createClient({
+  url: process.env.DATABASE_URL || process.env.TURSO_DATABASE_URL || "file:./data/collector-credit.db",
+  authToken: process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN || undefined,
+});
 const db = drizzle(client);
 const checkpointPath = "deployments/demo-portfolio.json";
 type MintRecord = { tokenId: string; txHash?: Hex };

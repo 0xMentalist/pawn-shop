@@ -22,7 +22,10 @@ const account = privateKeyToAccount(key);
 const rpc = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL;
 const chain = createPublicClient({ chain: sepolia, transport: http(rpc) });
 const wallet = createWalletClient({ account, chain: sepolia, transport: http(rpc) });
-const client = createClient({ url: process.env.DATABASE_URL ?? "file:./data/collector-credit.db" });
+const client = createClient({
+  url: process.env.DATABASE_URL || process.env.TURSO_DATABASE_URL || "file:./data/collector-credit.db",
+  authToken: process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN || undefined,
+});
 const db = drizzle(client);
 const testCards = DEMO_CARDS.filter((card) => card.id === "demo-pikachu-007" || card.id === "demo-venusaur-008");
 const ethToSend = parseEther("0.01");

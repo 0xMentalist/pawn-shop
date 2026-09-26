@@ -12,3 +12,4 @@ artifacts
 coverage
 data/ens-commitment.json
 data/ens-protocol-commitment.json
+.vercel

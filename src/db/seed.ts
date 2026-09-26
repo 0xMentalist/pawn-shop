@@ -5,9 +5,10 @@ import { dirname, resolve } from "node:path";
 import { cards, valuationFixtures } from "./schema";
 import { CATALOG_CARDS } from "../lib/demo-cards";
 
-const url = process.env.DATABASE_URL ?? "file:./data/collector-credit.db";
+const url = process.env.DATABASE_URL || process.env.TURSO_DATABASE_URL || "file:./data/collector-credit.db";
+const authToken = process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN || undefined;
 if (url.startsWith("file:")) mkdirSync(dirname(resolve(url.slice(5))), { recursive: true });
-const client = createClient({ url });
+const client = createClient({ url, authToken });
 const db = drizzle(client);
 
 for (const card of CATALOG_CARDS) {

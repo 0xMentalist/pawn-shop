@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "How it works" };
 const sections = [
   {
     title: "Borrow",
-    text: "Choose a card, see its test estimate, and review the loan terms before connecting a wallet. The card owner verifies with World ID, accepts the offer, and receives test MockUSDC. Repaying returns the card to its owner.",
+    text: "Connect your wallet to see the supported cards you own. Choose a card, review its sale reference and loan terms, then verify with World ID. Accept the offer to receive test MockUSDC. Repaying returns the card to its owner.",
     href: "/borrow",
     action: "Explore borrowing",
   },

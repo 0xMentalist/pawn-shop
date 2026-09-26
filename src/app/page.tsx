@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import { HowItWorksTrigger } from "@/components/how-it-works-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { DEMO_CARDS } from "@/lib/demo-cards";
 import { formatUsdc, maximumPrincipal } from "@/lib/loan-math";
@@ -18,7 +19,7 @@ export default function Home() {
           <p className="mt-7 max-w-lg text-lg leading-8 text-muted-foreground">Borrow against a vaulted graded card with a clear price reference, straightforward terms, and a wallet you control.</p>
           <div className="mt-9 flex flex-wrap items-center gap-4">
             <Link href="/borrow" className={cn(buttonVariants({ size: "lg" }), "gap-3")}>Go to app<ArrowUpRight className="size-4" aria-hidden="true" /></Link>
-            <a href="#how-it-works" className="inline-flex min-h-11 items-center gap-2 px-2 text-sm font-semibold text-foreground underline decoration-border underline-offset-8 hover:decoration-primary">How it works<ArrowRight className="size-4" aria-hidden="true" /></a>
+            <HowItWorksTrigger arrow className="inline-flex min-h-11 items-center gap-2 px-2 text-sm font-semibold text-foreground underline decoration-border underline-offset-8 hover:decoration-primary" />
           </div>
           <p className="mt-10 text-xs text-muted-foreground">Sepolia testnet · Simulated cards and valueless test funds</p>
         </div>
@@ -31,15 +32,6 @@ export default function Home() {
           <div className="flex items-center justify-between gap-4 border-t border-background/20 px-6 py-5 sm:px-8"><span className="text-sm text-background/70">Illustrative loan at 35%</span><strong className="text-xl font-semibold tabular-nums">{formatUsdc(exampleOffer)}</strong></div>
         </div>
       </div>
-    </section>
-    <section id="how-it-works" className="mx-auto max-w-7xl px-4 py-20 md:px-6 md:py-28 lg:px-8">
-      <div className="max-w-2xl"><p className="font-serial text-xs font-semibold uppercase tracking-widest text-primary">How it works</p><h2 className="font-display mt-4 text-4xl font-semibold leading-tight md:text-5xl">From collection to credit, in three steps.</h2></div>
-      <div className="mt-14 grid gap-10 md:grid-cols-3 md:gap-8">
-        <div className="border-t border-border pt-5"><span className="font-serial text-sm text-primary">01</span><h3 className="font-display mt-6 text-2xl font-semibold">Connect</h3><p className="mt-3 leading-7 text-muted-foreground">See the vaulted cards held by your wallet and the cards backing your active loans.</p></div>
-        <div className="border-t border-border pt-5"><span className="font-serial text-sm text-primary">02</span><h3 className="font-display mt-6 text-2xl font-semibold">Verify</h3><p className="mt-3 leading-7 text-muted-foreground">Use World ID to verify your eligibility before opening a loan.</p></div>
-        <div className="border-t border-border pt-5"><span className="font-serial text-sm text-primary">03</span><h3 className="font-display mt-6 text-2xl font-semibold">Borrow</h3><p className="mt-3 leading-7 text-muted-foreground">Review the latest sale reference and your terms before confirming in your wallet.</p></div>
-      </div>
-      <div className="mt-16 border-t border-border pt-8"><Link href="/borrow" className="inline-flex min-h-11 items-center gap-2 text-base font-semibold text-primary hover:underline hover:underline-offset-4">Explore the app<ArrowUpRight className="size-4" aria-hidden="true" /></Link></div>
     </section>
   </main>;
 }

@@ -38,7 +38,7 @@ const oldPool = active.contracts.LendingPool;
 const newPool = staged.contracts.LendingPool;
 const currency = active.contracts.MockUSDC;
 const openingBps = await client.readContract({ address: staged.contracts.LiquidationAuction, abi, functionName: "OPENING_BID_BPS" });
-if (openingBps !== 12_000n) throw new Error("Staged auction does not enforce the 120% opening bid");
+if (openingBps !== 7_500n) throw new Error("Staged auction does not enforce the 75% fair-value opening bid");
 const [minTerm, maxTerm] = await Promise.all([
   client.readContract({ address: staged.contracts.LoanManager, abi, functionName: "MIN_TERM_DAYS" }),
   client.readContract({ address: staged.contracts.LoanManager, abi, functionName: "MAX_TERM_DAYS" }),
@@ -60,7 +60,8 @@ const [oldLiquidity, deployedPrincipal, totalShares, ownedShares, maxWithdraw, w
 if (totalShares !== ownedShares) throw new Error("Old pool has shares owned by someone else; rollover stopped");
 const needed = 3_500_000_000n - newLiquidity;
 const withdrawal = needed > walletBalance ? needed - walletBalance : 0n;
-if (maxWithdraw < withdrawal || oldLiquidity < withdrawal + deployedPrincipal + 1_000_000_000n) throw new Error("Keep active loans and at least 1,000 MockUSDC liquid in the old pool");
+const oldPoolBuffer = deployedPrincipal > 0n ? 1_000_000_000n : 0n;
+if (maxWithdraw < withdrawal || oldLiquidity < withdrawal + deployedPrincipal + oldPoolBuffer) throw new Error("Keep active loans funded in the old pool");
 
 async function confirm(hash: Hex, label: string) {
   const receipt = await client.waitForTransactionReceipt({ hash });

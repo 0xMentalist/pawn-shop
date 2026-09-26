@@ -14,7 +14,7 @@ import {LoanVaultFactory} from "./LoanVaultFactory.sol";
 import {LoanVault} from "./LoanVault.sol";
 
 interface ILiquidationAuction {
-    function startAuction(uint256 loanId, uint256 tokenId, uint256 principal, address borrower) external;
+    function startAuction(uint256 loanId, uint256 tokenId, uint256 principal, uint256 fairValue, address borrower) external;
 }
 
 /// @notice Fixed-term loans against cards in one-card escrow vaults.
@@ -56,6 +56,7 @@ contract LoanManager is AccessControl, Pausable, ReentrancyGuard {
     ILiquidationAuction public auction;
     uint256 public nextLoanId = 1;
     mapping(uint256 => Loan) public loans;
+    mapping(uint256 => uint256) public fairValueForLoan;
     mapping(uint256 => uint256) public activeLoanForToken;
     mapping(uint256 => bool) public legacyLiquidatedCollateral;
 
@@ -123,6 +124,7 @@ contract LoanManager is AccessControl, Pausable, ReentrancyGuard {
         address vault = vaultFactory.deployLoanVault(salt, msg.sender, card, valuation.tokenId);
         uint64 maturity = uint64(block.timestamp + uint256(termDays) * 1 days);
         loans[loanId] = Loan(msg.sender, vault, valuation.tokenId, principal, uint64(block.timestamp), maturity, Status.Active);
+        fairValueForLoan[loanId] = valuation.value;
         activeLoanForToken[valuation.tokenId] = loanId;
         // Older receipts remain Liquidated after auction; ownership and escrow still enforce exclusivity.
         bool legacyLiquidated = custody == VaultedCardNFT.CustodyStatus.Liquidated;
@@ -186,7 +188,7 @@ contract LoanManager is AccessControl, Pausable, ReentrancyGuard {
         require(address(auction) != address(0), "Auction not set");
         loan.status = Status.InAuction;
         LoanVault(loan.vault).releaseToAuction(address(auction));
-        auction.startAuction(loanId, loan.tokenId, loan.principal, loan.borrower);
+        auction.startAuction(loanId, loan.tokenId, loan.principal, fairValueForLoan[loanId], loan.borrower);
         emit LoanDefaulted(loanId, loan.tokenId);
     }
 

@@ -13,9 +13,9 @@
     "appraiserResolver": "0x2676ad831f5b9a90aa009df8bf8a41683f20e7fdb146a176f462dbac4bbc4c8d",
     "register-appraiser": "0xcffb3dc11061a4293fb4cf0bcace56484b3af788daf942d6d740d77e061801df",
     "register-pool": "0x18a07c5c70d8d0615175ef8205a19f54a4c66b6a7f8bcd155bf0bef6ed870272",
-    "address-pool": "0xc32065d37da7868fbf82dc6180b4ad8d8f40039eeb68501fe3bbe49b29b26b55",
+    "address-pool": "0x4f46e59fe1de01abd6cdac4bf542db554093b098332442e59c8f330bca1252f1",
     "register-auction": "0x49d4c0be85b1f69daeb2e9404d4a27f26f5f50b3196347ee8c4e24c4581b110c",
-    "address-auction": "0xbc4c26310c6eca74cde1702643f43ad6dd96290cd477cd676a0cb6afeee13f7c",
+    "address-auction": "0xf9dd7eff2ec9d986ae6fc119d5001182956024d1dc7ebbef96430a9231999634",
     "delegate-appraiser-note": "0xe38b7d10e65f58e4e4ab3c84fe1253473967d386f062aab9832bf639c32dfba1",
     "fundAppraiser": "0x8ba7f9d365149ba652d64d1553554913dfcdba12114d3cba35000778f90873e3",
     "appraiserNote": "0x092e52c448f12435947dff11351a9bdedc1daa55d01cbcfac37ac52014def3a1"

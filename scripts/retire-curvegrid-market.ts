@@ -9,10 +9,11 @@ const key = process.env.CURVEGRID_API_KEY;
 if (!deploymentUrl || !key) throw new Error("Set CURVEGRID_DEPLOYMENT_URL and CURVEGRID_API_KEY");
 const base = new URL("/api/v0/", deploymentUrl);
 if (base.protocol !== "https:" || !base.hostname.endsWith(".multibaas.com")) throw new Error("Expected a MultiBaas HTTPS deployment");
-type Deployment = { chainId: number; contracts: { LoanManager: Address; LendingPool: Address; LiquidationAuction: Address } };
+type Deployment = { chainId: number; deployer: Address; contracts: { LoanManager: Address; LendingPool: Address; LiquidationAuction: Address } };
 const previous = JSON.parse(await readFile("deployments/sepolia-previous.json", "utf8")) as Deployment;
 const active = JSON.parse(await readFile("deployments/sepolia.json", "utf8")) as Deployment;
 if (previous.chainId !== sepolia.id || active.chainId !== sepolia.id ||
+    previous.deployer.toLowerCase() !== active.deployer.toLowerCase() ||
     previous.contracts.LoanManager.toLowerCase() === active.contracts.LoanManager.toLowerCase()) {
   throw new Error("Expected separate previous and active Sepolia markets");
 }
@@ -20,16 +21,18 @@ if (previous.chainId !== sepolia.id || active.chainId !== sepolia.id ||
 const client = createPublicClient({ chain: sepolia, transport: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL) });
 const abi = parseAbi([
   "function deployedPrincipal() view returns (uint256)",
-  "function availableLiquidity() view returns (uint256)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
   "function nextLoanId() view returns (uint256)",
   "function auctions(uint256) view returns (uint256,uint256,address,uint64,address,uint256,bool)",
 ]);
-const [principal, liquidity, nextLoanId] = await Promise.all([
+const [principal, totalShares, deployerShares, nextLoanId] = await Promise.all([
   client.readContract({ address: previous.contracts.LendingPool, abi, functionName: "deployedPrincipal" }),
-  client.readContract({ address: previous.contracts.LendingPool, abi, functionName: "availableLiquidity" }),
+  client.readContract({ address: previous.contracts.LendingPool, abi, functionName: "totalSupply" }),
+  client.readContract({ address: previous.contracts.LendingPool, abi, functionName: "balanceOf", args: [active.deployer] }),
   client.readContract({ address: previous.contracts.LoanManager, abi, functionName: "nextLoanId" }),
 ]);
-if (principal !== 0n || liquidity >= 1_000_000n) throw new Error("Previous pool still has a loan or at least 1 MockUSDC of available liquidity");
+if (principal !== 0n || totalShares !== deployerShares) throw new Error("Previous pool still has a loan or external depositor shares");
 for (let loanId = 1n; loanId < nextLoanId; loanId++) {
   const auction = await client.readContract({ address: previous.contracts.LiquidationAuction, abi, functionName: "auctions", args: [loanId] });
   if (auction[3] !== 0n && !auction[6]) throw new Error(`Previous auction ${loanId} is not settled`);

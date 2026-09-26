@@ -6,29 +6,29 @@
     "VaultedCardNFT": "0xbd636cc5a919f63b10e20b5c0212081bb9b80ba1",
     "HumanVerificationRegistry": "0x470ea1d6b607adaab8808bf0e47a399894e803e2",
     "ValuationVerifier": "0xcf648adcd6ee93efc35649e3e5ab85227efd4eaa",
-    "LendingPool": "0xc93a59b36ffc2a4434c980022ad564bc63434906",
-    "LoanVaultFactory": "0xe197da79c92fc215330e48ce76e511174dd1b666",
-    "LoanManager": "0x362f6d3c3484d69dae532b7b953c0d3213db9e68",
-    "LiquidationAuction": "0x9815c51b6d6ed25d1d62f9bf9f623ebd2f392067"
+    "LendingPool": "0x39fbc42be92122621a81334d09b3e2be1d24fac5",
+    "LoanVaultFactory": "0xd3bc9392096fddab514e39b254c6bf6e6a5b79bc",
+    "LoanManager": "0x8f0251ca81c708ee9751cda85b3abd73941b2bcb",
+    "LiquidationAuction": "0xe0fb5da5ebb8ee71c4d4db33e2e45c846efedb2e"
   },
   "transactionHashes": {
     "MockUSDC": "0xa1509f18ef3c54c05f978d636450b54b0d50c3781435eb7961f1f4750b8273c3",
     "VaultedCardNFT": "0x2e66d71be5df41c7f33063c0846d27c48214f754d068ead9c8410171b29fc146",
     "HumanVerificationRegistry": "0x8732138df7585d1ea860fc5ade6d30d4be109e5a512ca114e3bdaaa46a472045",
     "ValuationVerifier": "0x19040d3413bb7a7086cb9ca0e107c578c2b607f891bcc7bbd00f58ac4675e5de",
-    "LendingPool": "0xa06935fbe67b227c5f087fc354451aa0111f7193c0baf2fdd7726a2bf0cdc1a1",
-    "LoanVaultFactory": "0xfaf39d745620bce6b19265366a3e23391d792bc58339b33f46987bd15c8e1884",
-    "LoanManager": "0x77450e52649cf356e1e6943025ad786c7b72e0af391b2f87aafc562cfbed156a",
-    "LiquidationAuction": "0xbee8b7e32c3a739529e25187bdf0cd8b1c492ba248a1a2a843c82f0d23ec7198"
+    "LendingPool": "0x2f8c523216a0cc7f73f49f49442e0ea5684dcf6adaaf5b31aac68d7ab9e39bf4",
+    "LoanVaultFactory": "0x9df0ae608fdd2f7341be7bd0bf714b8c9186df6a214aa0afc2e1a16963071541",
+    "LoanManager": "0x502bcee4618cc045bc530c509649d0931e8ef7dbc0c367c9063406054b05b2ac",
+    "LiquidationAuction": "0x97ef5a68c4c5371b40fd18673caf7fa390f351eda68e07460483a4007af3ee8c"
   },
   "blockNumbers": {
     "MockUSDC": 11779001,
     "VaultedCardNFT": 11779003,
     "HumanVerificationRegistry": 11779005,
     "ValuationVerifier": 11779006,
-    "LendingPool": 11788156,
-    "LoanVaultFactory": 11788157,
-    "LoanManager": 11788159,
-    "LiquidationAuction": 11788160
+    "LendingPool": 11788752,
+    "LoanVaultFactory": 11788754,
+    "LoanManager": 11788756,
+    "LiquidationAuction": 11788757
   }
 }

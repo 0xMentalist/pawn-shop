@@ -31,6 +31,6 @@ export default async function AuctionsPage() {
   }));
   return <main className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8 md:px-6 md:py-12 lg:px-8"><AuctionRefresh /><PageHeading title="Card auctions" description="Find cards from loans that reached auction." />
     {syncError ? <p role="status" className="text-sm text-muted-foreground">Some auctions could not refresh right now.</p> : null}
-    {listings.length > 0 ? <AuctionBoard listings={listings.map(({ loanId, auctionAddress }) => ({ loanId, auctionAddress }))} cards={cards} /> : <Card><CardContent className="flex min-h-72 flex-col items-center justify-center p-8 text-center"><h2 className="font-display text-3xl font-semibold">{syncError ? "Auctions unavailable." : "No live auctions."}</h2><p className="mt-3 text-sm text-muted-foreground">{syncError ? "Please try again shortly." : "Cards entering auction will appear here."}</p></CardContent></Card>}
+    {listings.length > 0 ? <AuctionBoard listings={listings.map(({ loanId, auctionAddress, managerAddress }) => ({ loanId, auctionAddress, managerAddress }))} cards={cards} /> : <Card><CardContent className="flex min-h-72 flex-col items-center justify-center p-8 text-center"><h2 className="font-display text-3xl font-semibold">{syncError ? "Auctions unavailable." : "No live auctions."}</h2><p className="mt-3 text-sm text-muted-foreground">{syncError ? "Please try again shortly." : "Cards entering auction will appear here."}</p></CardContent></Card>}
   </main>;
 }

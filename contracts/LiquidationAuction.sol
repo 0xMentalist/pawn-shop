@@ -18,7 +18,7 @@ contract LiquidationAuction is IERC721Receiver, ReentrancyGuard {
 
     uint256 public constant DURATION = 3 minutes;
     uint256 public constant MIN_INCREMENT_BPS = 500;
-    uint256 public constant OPENING_BID_BPS = 12_000;
+    uint256 public constant OPENING_BID_BPS = 7_500;
     uint256 private constant BPS = 10_000;
 
     struct Auction {
@@ -36,6 +36,7 @@ contract LiquidationAuction is IERC721Receiver, ReentrancyGuard {
     IERC721 public immutable card;
     address public immutable recoveryAddress;
     mapping(uint256 => Auction) public auctions;
+    mapping(uint256 => uint256) public openingBidForLoan;
     mapping(uint256 => uint256) public unresolvedPrincipal;
 
     event AuctionStarted(uint256 indexed loanId, uint256 indexed tokenId, uint64 endsAt, uint256 openingBid);
@@ -55,20 +56,22 @@ contract LiquidationAuction is IERC721Receiver, ReentrancyGuard {
         return IERC721Receiver.onERC721Received.selector;
     }
 
-    function startAuction(uint256 loanId, uint256 tokenId, uint256 principal, address borrower) external {
+    function startAuction(uint256 loanId, uint256 tokenId, uint256 principal, uint256 fairValue, address borrower) external {
         require(msg.sender == address(manager), "Only loan manager");
         require(auctions[loanId].endsAt == 0, "Auction exists");
         require(card.ownerOf(tokenId) == address(this), "Collateral missing");
-        require(principal != 0 && borrower != address(0), "Invalid loan");
+        require(principal != 0 && fairValue >= principal && borrower != address(0), "Invalid loan");
         uint64 endsAt = uint64(block.timestamp + DURATION);
+        uint256 openingBid = _openingBid(fairValue);
         auctions[loanId] = Auction(tokenId, principal, borrower, endsAt, address(0), 0, false);
-        emit AuctionStarted(loanId, tokenId, endsAt, _openingBid(principal));
+        openingBidForLoan[loanId] = openingBid;
+        emit AuctionStarted(loanId, tokenId, endsAt, openingBid);
     }
 
     function minimumBid(uint256 loanId) public view returns (uint256) {
         Auction memory auction = auctions[loanId];
         require(auction.endsAt != 0, "Unknown auction");
-        if (auction.highestBid == 0) return _openingBid(auction.principal);
+        if (auction.highestBid == 0) return openingBidForLoan[loanId];
         uint256 increment = auction.highestBid * MIN_INCREMENT_BPS / 10_000;
         return auction.highestBid + (increment == 0 ? 1 : increment);
     }
@@ -101,7 +104,7 @@ contract LiquidationAuction is IERC721Receiver, ReentrancyGuard {
         emit AuctionSettled(loanId, recipient, proceeds, unresolvedPrincipal[loanId]);
     }
 
-    function _openingBid(uint256 principal) private pure returns (uint256) {
-        return Math.mulDiv(principal, OPENING_BID_BPS, BPS, Math.Rounding.Ceil);
+    function _openingBid(uint256 fairValue) private pure returns (uint256) {
+        return Math.mulDiv(fairValue, OPENING_BID_BPS, BPS, Math.Rounding.Ceil);
     }
 }

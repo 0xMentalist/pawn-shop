@@ -159,7 +159,7 @@ contract LifecycleTest is IERC721Receiver {
         vm.prank(BIDDER);
         token.approve(address(auction), type(uint256).max);
         vm.prank(BIDDER);
-        auction.bid(loanId, PRINCIPAL * 120 / 100);
+        auction.bid(loanId, 7_500 * 10 ** 6);
         vm.warp(block.timestamp + 3 minutes);
         auction.settle(loanId);
         uint256 interest = PRINCIPAL * manager.APR_BPS() * 60 days / (manager.BPS() * manager.YEAR());
@@ -208,7 +208,7 @@ contract LifecycleTest is IERC721Receiver {
         vm.prank(BIDDER);
         token.approve(address(auction), type(uint256).max);
         vm.prank(BIDDER);
-        auction.bid(loanId, 4_500 * 10 ** 6);
+        auction.bid(loanId, 8_000 * 10 ** 6);
         vm.warp(block.timestamp + 3 minutes);
         uint256 borrowerBefore = token.balanceOf(address(this));
         auction.settle(loanId);
@@ -222,11 +222,13 @@ contract LifecycleTest is IERC721Receiver {
         require(manager.activeLoanForToken(tokenId) == 0, "card still active");
     }
 
-    function testOpeningBidIsTwentyPercentAbovePrincipal() public {
+    function testOpeningBidIsSeventyFivePercentOfSignedFairValue() public {
         uint256 loanId = _originate();
         vm.warp(block.timestamp + 98 days);
         manager.markDefault(loanId);
-        uint256 openingBid = PRINCIPAL * 120 / 100;
+        uint256 openingBid = 7_500 * 10 ** 6;
+        require(manager.fairValueForLoan(loanId) == 10_000 * 10 ** 6, "fair value not retained");
+        require(auction.openingBidForLoan(loanId) == openingBid, "opening bid not retained");
         require(auction.minimumBid(loanId) == openingBid, "wrong opening bid");
 
         vm.prank(BIDDER);
@@ -241,6 +243,15 @@ contract LifecycleTest is IERC721Receiver {
         require(auction.minimumBid(loanId) == openingBid * 105 / 100, "wrong next bid");
     }
 
+    function testOpeningBidDoesNotDependOnBorrowedPrincipal() public {
+        registry.registerBorrower(address(this), bytes32(uint256(42)));
+        ValuationVerifier.Valuation memory quote = _quote(10_000 * 10 ** 6, bytes32(uint256(2)));
+        uint256 loanId = manager.originate(1_000 * 10 ** 6, 30, quote, _signature(quote));
+        manager.accelerateDemoMaturity(loanId);
+        manager.markDefault(loanId);
+        require(auction.minimumBid(loanId) == 7_500 * 10 ** 6, "opening bid followed principal");
+    }
+
     function testAuctionWinnerCanBorrowAgainstSameCard() public {
         uint256 firstLoanId = _originate();
         vm.warp(block.timestamp + 98 days);
@@ -250,7 +261,7 @@ contract LifecycleTest is IERC721Receiver {
         vm.prank(BIDDER);
         token.approve(address(auction), type(uint256).max);
         vm.prank(BIDDER);
-        auction.bid(firstLoanId, 4_500 * 10 ** 6);
+        auction.bid(firstLoanId, 8_000 * 10 ** 6);
         vm.warp(block.timestamp + 3 minutes);
         auction.settle(firstLoanId);
 
@@ -389,7 +400,7 @@ contract LifecycleTest is IERC721Receiver {
         vm.prank(BIDDER);
         token.approve(address(auction), type(uint256).max);
         vm.prank(BIDDER);
-        auction.bid(loanId, PRINCIPAL * 120 / 100);
+        auction.bid(loanId, 7_500 * 10 ** 6);
         vm.warp(block.timestamp + 3 minutes);
         auction.settle(loanId);
         require(pool.realizedLoss() == 0, "unexpected principal loss");
@@ -402,14 +413,14 @@ contract LifecycleTest is IERC721Receiver {
         vm.warp(block.timestamp + 98 days);
         manager.markDefault(loanId);
         token.approve(address(auction), type(uint256).max);
-        auction.bid(loanId, 4_200 * 10 ** 6);
+        auction.bid(loanId, 7_500 * 10 ** 6);
         uint256 balanceAfterFirstBid = token.balanceOf(address(this));
         vm.prank(BIDDER);
         token.faucet();
         vm.prank(BIDDER);
         token.approve(address(auction), type(uint256).max);
         vm.prank(BIDDER);
-        auction.bid(loanId, 4_500 * 10 ** 6);
-        require(token.balanceOf(address(this)) == balanceAfterFirstBid + 4_200 * 10 ** 6, "previous bid not refunded");
+        auction.bid(loanId, 8_000 * 10 ** 6);
+        require(token.balanceOf(address(this)) == balanceAfterFirstBid + 7_500 * 10 ** 6, "previous bid not refunded");
     }
 }

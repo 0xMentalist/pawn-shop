@@ -86,17 +86,19 @@ export function FaucetExperience({ cards, refreshError }: { cards: FaucetCard[];
   }
 
   return <div className="space-y-10">
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
-      <div><h1 className="font-display text-5xl font-semibold tracking-tight md:text-6xl">Start with a card.</h1><p className="mt-4 max-w-2xl text-lg leading-8 text-muted-foreground">Pick a demo card, claim test funds, and try Pawn Shop with your wallet.</p></div>
-      <div className="rounded-2xl border bg-card p-5"><div className="flex items-baseline justify-between gap-3"><p className="text-sm text-muted-foreground">Your MockUSDC</p><p className="font-display text-3xl font-semibold tabular-nums">{typeof balance.data === "bigint" ? formatUsdc(balance.data) : "—"}</p></div><p className="mt-2 text-sm text-muted-foreground">Valueless test currency on Sepolia.</p>
+    <div><h1 className="font-display text-5xl font-semibold tracking-tight md:text-6xl">Start with a card.</h1><p className="mt-4 max-w-2xl text-lg leading-8 text-muted-foreground">Pick a demo card, claim test funds, and try Pawn Shop with your wallet.</p></div>
+
+    <section aria-label="MockUSDC faucet" className="grid gap-5 rounded-2xl border bg-card p-5 md:grid-cols-[minmax(0,1fr)_20rem] md:items-center md:gap-8 md:p-6">
+      <div><p className="text-sm text-muted-foreground">Your MockUSDC</p><p className="mt-1 font-display text-3xl font-semibold tabular-nums md:text-4xl">{typeof balance.data === "bigint" ? formatUsdc(balance.data) : "—"}</p></div>
+      <div>
         {isConnected && !onSepolia ? <Button type="button" className="mt-5 w-full" disabled={switching} onClick={() => void switchChainAsync({ chainId: SEPOLIA_CHAIN_ID })}>{switching ? "Switching…" : "Switch to Sepolia"}</Button> : null}
-        {onSepolia ? <Button type="button" className="mt-5 w-full" disabled={!canClaimUsdc || gasMissing} aria-busy={usdcBusy} onClick={() => void claimUsdc()}>{usdcBusy ? "Claiming…" : nextClaim.isPending ? "Checking availability…" : cooldown ? "Claim available later" : "Claim 10,000 MockUSDC"}</Button> : !isConnected ? <div className="mt-5"><WalletButton /></div> : null}
+        {onSepolia ? <Button type="button" className="w-full" disabled={!canClaimUsdc || gasMissing} aria-busy={usdcBusy} onClick={() => void claimUsdc()}>{usdcBusy ? "Claiming…" : nextClaim.isPending ? "Checking availability…" : cooldown ? "Claim available later" : "Claim 10,000 MockUSDC"}</Button> : !isConnected ? <WalletButton /> : null}
         {balance.isError || nextClaim.isError ? <div className="mt-3 text-sm" role="alert"><p>Could not check your test funds.</p><Button type="button" variant="outline" className="mt-2" onClick={() => { void balance.refetch(); void nextClaim.refetch(); }}>Try again</Button></div> : null}
         {cooldown ? <p className="mt-2 text-xs text-muted-foreground">Next claim {new Date(cooldown * 1000).toLocaleString()}.</p> : null}
         {usdcMessage ? <p role="status" className="mt-3 text-sm">{usdcMessage}</p> : null}
         {usdcHash ? <a className="mt-2 inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={`https://sepolia.etherscan.io/tx/${usdcHash}`} target="_blank" rel="noopener noreferrer">View transaction <ExternalLink className="size-3" aria-hidden="true" /></a> : null}
       </div>
-    </div>
+    </section>
 
     {gasMissing ? <p role="status" className="rounded-xl border border-border bg-secondary px-4 py-3 text-sm">Add a little Sepolia ETH to your wallet for card and MockUSDC claim transactions.</p> : null}
     {refreshError ? <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 text-sm"><span>Card availability could not refresh. Check again before claiming.</span><Button type="button" variant="outline" onClick={() => router.refresh()}>Refresh</Button></div> : null}
@@ -112,7 +114,6 @@ export function FaucetExperience({ cards, refreshError }: { cards: FaucetCard[];
         const atLimit = typeof claimedCount.data === "bigint" && claimedCount.data >= 3n;
         return <article key={card.id} className="flex flex-col overflow-hidden rounded-2xl border bg-card"><div className="flex h-56 items-center justify-center bg-secondary p-4"><img src={card.imageUrl} alt={`${card.name} Base Set card artwork`} width={164} height={226} loading="lazy" className="h-full w-auto max-w-full object-contain drop-shadow-sm" /></div><div className="flex flex-1 flex-col p-5"><div className="flex items-baseline justify-between gap-2"><h3 className="font-display text-xl font-semibold">{card.name}</h3><span className="font-serial text-xs text-muted-foreground">#{String(card.id.slice(-3))}</span></div><p className="mt-1 text-sm text-muted-foreground">Base Set · Demo PSA {card.grade} · {card.printing.split(" #")[0]}</p><p className="mt-5 text-sm text-muted-foreground">PSA guide estimate</p><p className="font-display text-2xl font-semibold tabular-nums">{formatUsdc(card.valueMicroUsdc)}</p><Button type="button" variant={isClaimed ? "outline" : "default"} className="mt-5 w-full" disabled={isClaimed || !onSepolia || !contracts.cardFaucet || Boolean(claimingId) || atLimit || gasMissing || typeof claimedCount.data !== "bigint"} aria-busy={claimingId === card.id} onClick={() => void claimCard(card)}>{isClaimed ? "Claimed" : claimingId === card.id ? "Claiming…" : onSepolia && claimedCount.isPending ? "Checking…" : atLimit ? "Limit reached" : "Claim card"}</Button></div></article>;
       })}</div>}
-      <p className="text-sm leading-6 text-muted-foreground">These are simulated NFTs. No physical cards are held. PSA guide amounts are examples for the demo and may change.</p>
     </section>
   </div>;
 }

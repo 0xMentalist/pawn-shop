@@ -11,13 +11,13 @@ import { abis, contracts, SEPOLIA_CHAIN_ID } from "@/lib/contracts";
 import { formatUsdc } from "@/lib/loan-math";
 
 type AuctionCard = { name: string; grade: string; imageUrl: string; psaReferenceNumber: string; saleSourceUrl: string; priceSource: "psa-auction-comparable" | "psa-price-guide" };
-type AuctionRef = { loanId: string; auctionAddress: Address };
+type AuctionRef = { loanId: string; auctionAddress: Address; managerAddress: Address };
 
 export function AuctionBoard({ listings, cards }: { listings: AuctionRef[]; cards: Record<string, AuctionCard> }) {
-  return <div className="grid gap-4">{listings.map(({ loanId, auctionAddress }) => <AuctionItem key={`${auctionAddress}:${loanId}`} loanId={BigInt(loanId)} auctionAddress={auctionAddress} cards={cards} />)}</div>;
+  return <div className="grid gap-4">{listings.map(({ loanId, auctionAddress, managerAddress }) => <AuctionItem key={`${auctionAddress}:${loanId}`} loanId={BigInt(loanId)} auctionAddress={auctionAddress} managerAddress={managerAddress} cards={cards} />)}</div>;
 }
 
-function AuctionItem({ loanId, auctionAddress, cards }: { loanId: bigint; auctionAddress: Address; cards: Record<string, AuctionCard> }) {
+function AuctionItem({ loanId, auctionAddress, managerAddress, cards }: { loanId: bigint; auctionAddress: Address; managerAddress: Address; cards: Record<string, AuctionCard> }) {
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -30,6 +30,8 @@ function AuctionItem({ loanId, auctionAddress, cards }: { loanId: bigint; auctio
   const ready = Boolean(contracts.mockUsdc && isConnected && chainId === SEPOLIA_CHAIN_ID && publicClient);
   const auction = useReadContract({ address: auctionAddress, abi: abis.auction, functionName: "auctions", args: [loanId], chainId: SEPOLIA_CHAIN_ID, query: { refetchInterval: 15_000 } });
   const minBid = useReadContract({ address: auctionAddress, abi: abis.auction, functionName: "minimumBid", args: [loanId], chainId: SEPOLIA_CHAIN_ID, query: { refetchInterval: 15_000 } });
+  const currentMarket = managerAddress.toLowerCase() === contracts.manager?.toLowerCase();
+  const fairValue = useReadContract({ address: managerAddress, abi: abis.manager, functionName: "fairValueForLoan", args: [loanId], chainId: SEPOLIA_CHAIN_ID, query: { enabled: currentMarket } });
   const tokenBalance = useReadContract({ address: contracts.mockUsdc, abi: abis.mockUsdc, functionName: "balanceOf", args: [address ?? zeroAddress], chainId: SEPOLIA_CHAIN_ID, query: { enabled: ready, refetchInterval: 15_000 } });
   const details = Array.isArray(auction.data) ? auction.data : null;
   const card = details ? cards[String(details[0])] : undefined;
@@ -81,7 +83,7 @@ function AuctionItem({ loanId, auctionAddress, cards }: { loanId: bigint; auctio
 
   if (!details || endsAt === 0) return <Card><CardContent className="flex items-center gap-3 p-5 text-sm text-muted-foreground">{auction.isError ? <>Could not load auction #{loanId.toString()}. <Button type="button" variant="outline" size="sm" onClick={() => void auction.refetch()}>Retry</Button></> : `Loading auction #${loanId.toString()}…`}</CardContent></Card>;
   return <Card><CardHeader className="gap-4 sm:flex-row sm:items-center">{card ? <div className="flex h-36 w-28 shrink-0 items-center justify-center rounded-xl bg-secondary p-2"><img src={card.imageUrl} alt={`${card.name} card artwork`} className="h-full w-auto max-w-full object-contain" /></div> : null}<div className="space-y-1"><CardTitle className="text-2xl">{card ? `${card.name} · PSA ${card.grade}` : `Card #${String(details[0])}`}</CardTitle><CardDescription>Card #{String(details[0])} · Loan #{loanId.toString()} · {settled ? "Settled" : closed ? "Bidding closed · ready to settle" : `Open until ${new Date(endsAt).toLocaleString()}`}</CardDescription>{card ? <a className="font-serial inline-flex min-h-8 items-center text-xs font-semibold text-primary underline underline-offset-4" href={card.saleSourceUrl} target="_blank" rel="noopener noreferrer">{card.priceSource === "psa-price-guide" ? "PSA price guide" : `Comparable PSA reference #${card.psaReferenceNumber}`}</a> : null}</div></CardHeader><CardContent className="space-y-4">
-    <div className="grid gap-3 text-sm sm:grid-cols-3"><div><p className="text-xs text-muted-foreground">Outstanding principal</p><p className="mt-1 font-semibold tabular-nums">{formatUsdc(details[1] as bigint)}</p></div><div><p className="text-xs text-muted-foreground">{settled ? "Winning bid" : "Highest bid"}</p><p className="mt-1 font-semibold tabular-nums">{formatUsdc(details[5] as bigint)}</p></div>{!settled ? <div><p className="text-xs text-muted-foreground">{(details[5] as bigint) === 0n ? "Opening bid" : "Next minimum"}</p><p className="mt-1 font-semibold tabular-nums">{minimum ? formatUsdc(minimum) : "—"}</p></div> : null}</div>
+    <div className="grid gap-3 text-sm sm:grid-cols-4">{currentMarket ? <div><p className="text-xs text-muted-foreground">Card value at loan</p><p className="mt-1 font-semibold tabular-nums">{typeof fairValue.data === "bigint" ? formatUsdc(fairValue.data) : "—"}</p></div> : null}<div><p className="text-xs text-muted-foreground">Outstanding principal</p><p className="mt-1 font-semibold tabular-nums">{formatUsdc(details[1] as bigint)}</p></div><div><p className="text-xs text-muted-foreground">{settled ? "Winning bid" : "Highest bid"}</p><p className="mt-1 font-semibold tabular-nums">{formatUsdc(details[5] as bigint)}</p></div>{!settled ? <div><p className="text-xs text-muted-foreground">{(details[5] as bigint) === 0n ? currentMarket ? "Opening bid · 75% of value" : "Opening bid" : "Next minimum"}</p><p className="mt-1 font-semibold tabular-nums">{minimum ? formatUsdc(minimum) : "—"}</p></div> : null}</div>
     {!settled && !closed ? <form className="flex flex-col gap-3 sm:flex-row" onSubmit={(event) => { event.preventDefault(); void bid(); }}><div className="flex-1"><label htmlFor={`auction-bid-${loanId}`} className="sr-only">Your bid in MockUSDC</label><Input id={`auction-bid-${loanId}`} type="text" inputMode="decimal" placeholder="Bid in MockUSDC" value={amount} onChange={(event) => setAmount(event.target.value)} /></div><Button type="submit" disabled={!ready || busy || !entered || entered < minimum}>Place bid</Button></form> : null}
     {!settled && closed ? <Button type="button" disabled={!ready || busy} onClick={() => void settle()}>Settle auction</Button> : null}
     {!settled ? !isConnected ? <p className="text-xs text-muted-foreground">Connect a wallet to bid or settle.</p> : chainId !== SEPOLIA_CHAIN_ID ? <p className="text-xs text-muted-foreground">Switch your wallet to Sepolia.</p> : <p className="text-xs text-muted-foreground">Your MockUSDC: {typeof tokenBalance.data === "bigint" ? formatUsdc(tokenBalance.data) : "—"}</p> : null}

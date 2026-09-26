@@ -17,6 +17,9 @@
     "test:unit": "node --import tsx --test src/lib/loan-math.test.ts src/lib/realyse.test.ts src/lib/demo-price.test.ts src/lib/world.test.ts src/lib/wallet-cards.test.ts",
     "deploy:check": "node --import tsx scripts/deploy-sepolia.ts --check",
     "deploy:sepolia": "node --import tsx scripts/deploy-sepolia.ts --deploy",
+    "deploy:fresh": "node --import tsx scripts/deploy-sepolia.ts --deploy --fresh",
+    "deploy:activate": "node --import tsx scripts/deploy-sepolia.ts --activate",
+    "deploy:pause-previous": "node --import tsx scripts/pause-previous-originations.ts",
     "card:mint-demo": "node --import tsx scripts/mint-demo-card.ts",
     "card:mint-portfolio": "node --import tsx scripts/mint-demo-portfolio.ts",
     "ens:check": "node --import tsx scripts/register-ens-sepolia.ts --check",
@@ -28,8 +31,10 @@
     "ens:protocol:verify": "node --import tsx scripts/setup-ens-protocol.ts --check",
     "curvegrid:check": "node --import tsx scripts/configure-curvegrid.ts --check",
     "curvegrid:setup": "node --import tsx scripts/configure-curvegrid.ts --setup",
+    "curvegrid:retire-previous": "node --import tsx scripts/retire-curvegrid-market.ts",
     "world:smoke": "node --env-file=.env.local --import tsx scripts/smoke-world-staging.ts",
-    "pool:seed-demo": "node --import tsx scripts/seed-demo-liquidity.ts"
+    "pool:seed-demo": "node --import tsx scripts/seed-demo-liquidity.ts",
+    "pool:rollover-demo": "node --import tsx scripts/rollover-demo-liquidity.ts"
   },
   "dependencies": {
     "@libsql/client": "latest",

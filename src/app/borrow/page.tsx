@@ -11,7 +11,7 @@ export default async function BorrowPage() {
   const worldConfig = process.env.WORLD_APP_ID && process.env.WORLD_RP_ID && ["production", "staging"].includes(process.env.WORLD_ENVIRONMENT ?? "")
     ? { appId: process.env.WORLD_APP_ID, rpId: process.env.WORLD_RP_ID, environment: process.env.WORLD_ENVIRONMENT as "production" | "staging" }
     : null;
-  return <main className="mx-auto w-full max-w-6xl space-y-8 px-4 py-8 md:px-6 md:py-12">
+  return <main className="mx-auto w-full min-w-0 max-w-6xl space-y-8 px-4 py-8 md:px-6 md:py-12">
     <BorrowFlow assets={records.map(({ card, valuation }) => {
       const evidence = getDemoCardEvidence(card.id);
       if (!evidence) throw new Error(`Missing card evidence for ${card.id}`);

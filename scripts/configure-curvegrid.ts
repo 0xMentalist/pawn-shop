@@ -46,17 +46,19 @@ for (const name of names) {
     await api("POST", "contracts", [{ label, contractName: name, version: "1.0", bin: "0x", rawAbi }]);
     console.log(`Added ${name} ABI to MultiBaas library.`);
   }
-  if (!setup) {
-    console.log(`${name}: ABI ${knownLabels.has(label) ? "present" : "missing"}`);
-    continue;
-  }
   let linked: { address: string; contracts: { label: string }[] } | null = null;
   try { linked = await api("GET", `chains/ethereum/addresses/${address}`); }
   catch (error) {
     if (!(error instanceof Error) || !error.message.includes("HTTP 404")) throw error;
   }
+  if (!setup) {
+    const isLinked = linked?.address.toLowerCase() === address.toLowerCase() && linked.contracts.some((contract) => contract.label === label);
+    console.log(`${name}: ABI ${knownLabels.has(label) ? "present" : "missing"}, active address ${isLinked ? "linked" : "missing"}`);
+    if (!knownLabels.has(label) || !isLinked) process.exitCode = 1;
+    continue;
+  }
   if (!linked) {
-    await api("POST", "chains/ethereum/addresses", { alias: label, address });
+    await api("POST", "chains/ethereum/addresses", { alias: `${label}-${address.slice(2, 8).toLowerCase()}`, address });
     console.log(`Added ${name} address alias.`);
     linked = await api("GET", `chains/ethereum/addresses/${address}`);
   }

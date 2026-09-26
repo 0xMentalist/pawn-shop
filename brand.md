@@ -1,21 +1,25 @@
 # Pawn Shop — brand direction
 
-A clean, minimal interface for card-backed borrowing and lending. A simple three-sphere mark nods to the traditional pawnbroker sign; the product copy stays direct and trustworthy. The public landing page explains the product; the app shows a wallet's own supported cards and loan activity.
+Pawn Shop is a collector-first lending app. Its visual direction takes cues from Aave's clear financial product hierarchy, generous space, and confident copy, while using graded-card imagery and a smiling card mascot with three pawnbroker spheres as its own identity.
 
 **Name:** Pawn Shop
-**Tagline:** Keep your cards. Access their value.
+**Wordmark:** pawn shop.
+**Tagline:** Keep your cards. Make your next move.
 
 ## Type
 
-- **IBM Plex Sans** for page titles, card names, values, navigation, controls, and body copy. Larger sizes and tighter tracking carry the hierarchy.
-- System monospace, sparingly, for PSA reference numbers and other technical identifiers users need to check.
+- **Sora** for headlines, wordmark, card names, and key financial values. Use semibold with tight tracking.
+- **DM Sans** for navigation, body copy, forms, and supporting labels.
+- System monospace only for PSA certificate references and technical identifiers.
 
-IBM Plex Sans is loaded through `next/font` with `display: swap`.
+The bundled Latin font files are loaded through `next/font/local` with `display: swap`.
 
 ## Color roles
 
-CSS custom properties in `src/app/globals.css` are the source of truth. `--background` is a cool near-white; `--card` is white; `--foreground` is deep graphite; `--primary` is dark teal; `--accent` is soft mint; `--border` is a cool gray line. Dark mode keeps the same graphite and teal relationship. The mark and favicon use dark teal with a restrained brass accent.
+The source of truth is `src/app/globals.css`. Terracotta (`#ac492e`) signals action and active selection. Deep evergreen ink (`#1c2925`) carries text. The base is a soft mineral white (`#f6f7f3`); cards stay white, with pale sage surfaces for card imagery and secondary actions. A light peach hover surface supports the terracotta. Warning and destructive colors are reserved for their functional meanings.
 
 ## Components and copy
 
-Keep surfaces flat with visible borders, generous spacing, and one primary action per view. Use direct language: “Go to app,” “Connect your wallet,” “See loan offer,” and “Manage your loan.” Only show the card picker after wallet connection and successful ownership checks. Keep grade and comparable PSA references visible, without extra badges or decorative labels. Show test currency details where the loan or deposit amount is presented.
+Use large, left-aligned headings; short paragraphs; one clear primary action; soft rounded card surfaces; and pill-shaped action buttons. Let actual card art supply the playful color. Product previews should use card sale evidence and computed loan values. Keep the wallet-owned card picker behind wallet connection. Disclose test currency and loan terms at the point of action.
+
+Write for collectors rather than protocol insiders: “Explore borrowing,” “Supply liquidity,” “Your cards,” “See loan offer,” and “Repay and reclaim card.” Avoid repeated explainer labels and invented trust claims.

@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createPublicClient, createWalletClient, formatEther, http, isAddress, keccak256, toBytes, type Abi, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -15,11 +15,23 @@ const account = privateKeyToAccount(deployerKey);
 const appraiser = privateKeyToAccount(appraiserKey).address;
 const publicClient = createPublicClient({ chain: sepolia, transport: http(rpcUrl) });
 const walletClient = createWalletClient({ account, chain: sepolia, transport: http(rpcUrl) });
-const outputPath = resolve("deployments/sepolia.json");
+const fresh = process.argv.includes("--fresh");
+const outputPath = resolve(fresh ? "deployments/sepolia-next.json" : "deployments/sepolia.json");
+const activePath = resolve("deployments/sepolia.json");
 const admin = account.address;
 
 type ContractName = "MockUSDC" | "VaultedCardNFT" | "HumanVerificationRegistry" | "ValuationVerifier" | "LendingPool" | "LoanVaultFactory" | "LoanManager" | "LiquidationAuction";
 type Deployment = { chainId: number; deployer: Address; contracts: Partial<Record<ContractName, Address>>; transactionHashes: Partial<Record<ContractName, Hex>>; blockNumbers: Partial<Record<ContractName, number>> };
+
+function freshMarketFrom(previous: Deployment): Deployment {
+  const reused = ["MockUSDC", "VaultedCardNFT", "HumanVerificationRegistry", "ValuationVerifier"] as const;
+  return {
+    chainId: sepolia.id, deployer: admin,
+    contracts: Object.fromEntries(reused.map((name) => [name, previous.contracts[name]])),
+    transactionHashes: Object.fromEntries(reused.map((name) => [name, previous.transactionHashes[name]])),
+    blockNumbers: Object.fromEntries(reused.map((name) => [name, previous.blockNumbers[name]])),
+  } as Deployment;
+}
 
 async function artifact(name: ContractName): Promise<{ abi: Abi; bytecode: Hex }> {
   const file = resolve(`artifacts/contracts/${name}.sol/${name}.json`);
@@ -32,9 +44,18 @@ async function existingDeployment(): Promise<Deployment> {
   try {
     const stored = JSON.parse(await readFile(outputPath, "utf8")) as Deployment;
     if (stored.chainId !== sepolia.id || stored.deployer.toLowerCase() !== admin.toLowerCase()) throw new Error("Deployment file belongs to another chain or deployer");
+    if (fresh) {
+      const active = JSON.parse(await readFile(activePath, "utf8")) as Deployment;
+      if (stored.contracts.LoanManager?.toLowerCase() === active.contracts.LoanManager?.toLowerCase()) return freshMarketFrom(active);
+    }
     return stored;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    if (fresh) {
+      const previous = JSON.parse(await readFile(activePath, "utf8")) as Deployment;
+      if (previous.chainId !== sepolia.id || previous.deployer.toLowerCase() !== admin.toLowerCase()) throw new Error("Active deployment belongs to another chain or deployer");
+      return freshMarketFrom(previous);
+    }
     return { chainId: sepolia.id, deployer: admin, contracts: {}, transactionHashes: {}, blockNumbers: {} };
   }
 }
@@ -73,7 +94,8 @@ async function setup(name: ContractName, address: Address, functionName: string,
   console.log(`${name}.${functionName}: ${hash}`);
 }
 
-async function upsertPublicEnv(addresses: Deployment["contracts"]) {
+async function upsertPublicEnv(addresses: Deployment["contracts"], previousManager?: Address) {
+  let env = await readFile(".env.local", "utf8");
   const values: Record<string, string> = {
     NEXT_PUBLIC_MOCK_USDC_ADDRESS: addresses.MockUSDC!,
     NEXT_PUBLIC_CARD_ADDRESS: addresses.VaultedCardNFT!,
@@ -83,13 +105,60 @@ async function upsertPublicEnv(addresses: Deployment["contracts"]) {
     NEXT_PUBLIC_AUCTION_ADDRESS: addresses.LiquidationAuction!,
     NEXT_PUBLIC_HUMAN_REGISTRY_ADDRESS: addresses.HumanVerificationRegistry!,
   };
-  let env = await readFile(".env.local", "utf8");
+  if (previousManager) {
+    values.NEXT_PUBLIC_PREVIOUS_LOAN_MANAGER_ADDRESS = previousManager;
+    const existing = /(?:^|\n)NEXT_PUBLIC_LEGACY_LOAN_MANAGER_ADDRESSES=([^\n]*)/.exec(env)?.[1] ?? "";
+    const earlier = /(?:^|\n)NEXT_PUBLIC_PREVIOUS_LOAN_MANAGER_ADDRESS=([^\n]*)/.exec(env)?.[1] ?? "";
+    const legacy = [...new Set([previousManager, ...existing.split(","), earlier].map((value) => value.trim().toLowerCase()).filter((value) => isAddress(value) && value !== addresses.LoanManager?.toLowerCase()))];
+    values.NEXT_PUBLIC_LEGACY_LOAN_MANAGER_ADDRESSES = legacy.join(",");
+  }
   for (const [key, value] of Object.entries(values)) {
     const line = `${key}=${value}`;
     const pattern = new RegExp(`^${key}=.*$`, "m");
     env = pattern.test(env) ? env.replace(pattern, line) : `${env.trimEnd()}\n${line}\n`;
   }
   await writeFile(".env.local", env, { mode: 0o600 });
+}
+
+async function activateStaged() {
+  const staged = JSON.parse(await readFile(resolve("deployments/sepolia-next.json"), "utf8")) as Deployment;
+  const previous = JSON.parse(await readFile(activePath, "utf8")) as Deployment;
+  if (staged.chainId !== sepolia.id || staged.deployer.toLowerCase() !== admin.toLowerCase()) throw new Error("Staged deployment belongs to another chain or deployer");
+  for (const name of ["MockUSDC", "VaultedCardNFT", "HumanVerificationRegistry", "ValuationVerifier"] as const) {
+    if (staged.contracts[name]?.toLowerCase() !== previous.contracts[name]?.toLowerCase()) throw new Error(`${name} must remain unchanged during market migration`);
+  }
+  for (const name of ["MockUSDC", "VaultedCardNFT", "HumanVerificationRegistry", "ValuationVerifier", "LendingPool", "LoanVaultFactory", "LoanManager", "LiquidationAuction"] as const) {
+    const address = staged.contracts[name];
+    const code = address ? await publicClient.getCode({ address }) : null;
+    if (!code || code === "0x") throw new Error(`Staged ${name} is not deployed`);
+  }
+  const pool = staged.contracts.LendingPool!;
+  const factory = staged.contracts.LoanVaultFactory!;
+  const manager = staged.contracts.LoanManager!;
+  const auction = staged.contracts.LiquidationAuction!;
+  if (pool.toLowerCase() === previous.contracts.LendingPool?.toLowerCase() || manager.toLowerCase() === previous.contracts.LoanManager?.toLowerCase()) throw new Error("Replacement market must use new pool and manager contracts");
+  const poolManager = await publicClient.readContract({ address: pool, abi: (await artifact("LendingPool")).abi, functionName: "loanManager" }) as Address;
+  if (poolManager.toLowerCase() !== manager.toLowerCase()) throw new Error("Staged pool is not wired to the new manager");
+  const available = await publicClient.readContract({ address: pool, abi: (await artifact("LendingPool")).abi, functionName: "availableLiquidity" });
+  if (typeof available !== "bigint" || available < 3_500_000_000n) throw new Error("Staged pool needs enough liquidity for a demo loan");
+  const factoryManager = await publicClient.readContract({ address: factory, abi: (await artifact("LoanVaultFactory")).abi, functionName: "loanManager" }) as Address;
+  if (factoryManager.toLowerCase() !== manager.toLowerCase()) throw new Error("Staged vault factory is not wired to the new manager");
+  const configuredAuction = await publicClient.readContract({ address: manager, abi: (await artifact("LoanManager")).abi, functionName: "auction" }) as Address;
+  if (configuredAuction.toLowerCase() !== auction.toLowerCase()) throw new Error("Staged manager is not wired to the new auction");
+  const previousPath = resolve("deployments/sepolia-previous.json");
+  const archiveDir = resolve("deployments/archive");
+  await mkdir(archiveDir, { recursive: true });
+  for (const path of [previousPath, activePath]) {
+    let retired: Deployment;
+    try { retired = JSON.parse(await readFile(path, "utf8")) as Deployment; }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") continue; throw error; }
+    const managerAddress = retired.contracts.LoanManager;
+    if (managerAddress) await writeFile(resolve(archiveDir, `sepolia-${managerAddress.toLowerCase()}.json`), `${JSON.stringify(retired, null, 2)}\n`);
+  }
+  await writeFile(previousPath, `${JSON.stringify(previous, null, 2)}\n`);
+  await upsertPublicEnv(staged.contracts, previous.contracts.LoanManager);
+  await writeFile(activePath, `${JSON.stringify(staged, null, 2)}\n`);
+  console.log("Activated the new Sepolia lending market. Previous addresses are in deployments/sepolia-previous.json.");
 }
 
 async function main() {
@@ -99,7 +168,8 @@ async function main() {
   console.log(`Sepolia deployer: ${admin}`);
   console.log(`ETH balance: ${formatEther(balance)}`);
   if (process.argv.includes("--check")) return;
-  if (!process.argv.includes("--deploy")) throw new Error("Pass --check to inspect or --deploy to send transactions");
+  if (process.argv.includes("--activate")) return activateStaged();
+  if (!process.argv.includes("--deploy")) throw new Error("Pass --check, --activate, or --deploy");
   if (balance === 0n) throw new Error("Fund the deployer with Sepolia ETH before deployment");
 
   const state = await existingDeployment();
@@ -112,13 +182,16 @@ async function main() {
   const manager = await deploy(state, "LoanManager", [admin, admin, pool, card, verifier, registry, factory, true]);
   const auction = await deploy(state, "LiquidationAuction", [manager, currency, card, admin]);
   const role = keccak256(toBytes("LOAN_MANAGER_ROLE"));
-  await setup("LendingPool", pool, "setLoanManager", [manager], async () => (await publicClient.readContract({ address: pool, abi: (await artifact("LendingPool")).abi, functionName: "loanManager" })) === manager);
-  await setup("LoanVaultFactory", factory, "setLoanManager", [manager], async () => (await publicClient.readContract({ address: factory, abi: (await artifact("LoanVaultFactory")).abi, functionName: "loanManager" })) === manager);
+  await setup("LendingPool", pool, "setLoanManager", [manager], async () => String(await publicClient.readContract({ address: pool, abi: (await artifact("LendingPool")).abi, functionName: "loanManager" })).toLowerCase() === manager.toLowerCase());
+  await setup("LoanVaultFactory", factory, "setLoanManager", [manager], async () => String(await publicClient.readContract({ address: factory, abi: (await artifact("LoanVaultFactory")).abi, functionName: "loanManager" })).toLowerCase() === manager.toLowerCase());
   await setup("VaultedCardNFT", card, "grantRole", [role, manager], async () => Boolean(await publicClient.readContract({ address: card, abi: (await artifact("VaultedCardNFT")).abi, functionName: "hasRole", args: [role, manager] })));
   await setup("ValuationVerifier", verifier, "grantRole", [role, manager], async () => Boolean(await publicClient.readContract({ address: verifier, abi: (await artifact("ValuationVerifier")).abi, functionName: "hasRole", args: [role, manager] })));
-  await setup("LoanManager", manager, "setAuction", [auction], async () => (await publicClient.readContract({ address: manager, abi: (await artifact("LoanManager")).abi, functionName: "auction" })) === auction);
-  await upsertPublicEnv(state.contracts);
-  console.log("Deployment complete. Public addresses saved in deployments/sepolia.json and .env.local.");
+  await setup("LoanManager", manager, "setAuction", [auction], async () => String(await publicClient.readContract({ address: manager, abi: (await artifact("LoanManager")).abi, functionName: "auction" })).toLowerCase() === auction.toLowerCase());
+  if (fresh) console.log("Replacement market staged in deployments/sepolia-next.json. Seed it before --activate.");
+  else {
+    await upsertPublicEnv(state.contracts);
+    console.log("Deployment complete. Public addresses saved in deployments/sepolia.json and .env.local.");
+  }
 }
 
 main().catch((error) => { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; });

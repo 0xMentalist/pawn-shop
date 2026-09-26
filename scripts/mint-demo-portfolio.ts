@@ -55,17 +55,6 @@ async function existingMint(certificationNumber: string): Promise<MintRecord | n
   return { tokenId: mint.args.tokenId.toString(), txHash: mint.transactionHash };
 }
 
-async function nextCertification(current: string) {
-  const base = current.replace(/-R\d+$/, "");
-  let round = Number(current.match(/-R(\d+)$/)?.[1] ?? 1) + 1;
-  for (;;) {
-    const candidate = `${base}-R${round}`;
-    const used = await publicClient.readContract({ address: cardAddress, abi: cardAbi, functionName: "certificationUsed", args: [keccak256(toBytes(candidate))] });
-    if (used === false) return candidate;
-    round++;
-  }
-}
-
 async function mintCard(record: typeof cards.$inferSelect, certificationNumber: string): Promise<MintRecord> {
   const attestation = keccak256(toBytes(`simulated-demo-custody:${certificationNumber}`));
   const evidence = DEMO_CARDS.find((card) => card.id === record.id);
@@ -97,29 +86,18 @@ try {
     const [record] = await db.select().from(cards).where(eq(cards.id, fixture.id));
     if (!record) throw new Error(`Run pnpm db:seed before minting ${fixture.id}`);
     let mint = checkpoint.cards[fixture.id] ?? (record.tokenId ? { tokenId: record.tokenId } : null);
-    let certificationNumber = record.certificationNumber;
+    const certificationNumber = record.certificationNumber;
     if (!mint) {
       mint = await existingMint(certificationNumber) ?? await mintCard(record, certificationNumber);
       checkpoint.cards[fixture.id] = mint;
       await saveCheckpoint();
     }
-    let tokenId = BigInt(mint.tokenId);
-    let details = await publicClient.readContract({ address: cardAddress, abi: cardAbi, functionName: "cardDetails", args: [tokenId] });
-    let custodyStatus = cardCustodyStatus(details);
-    if (custodyStatus === 4) {
-      certificationNumber = await nextCertification(cardCertificationNumber(details) ?? certificationNumber);
-      mint = await mintCard(record, certificationNumber);
-      checkpoint.cards[fixture.id] = mint;
-      await saveCheckpoint();
-      tokenId = BigInt(mint.tokenId);
-      details = await publicClient.readContract({ address: cardAddress, abi: cardAbi, functionName: "cardDetails", args: [tokenId] });
-      custodyStatus = cardCustodyStatus(details);
-    }
+    const tokenId = BigInt(mint.tokenId);
+    const details = await publicClient.readContract({ address: cardAddress, abi: cardAbi, functionName: "cardDetails", args: [tokenId] });
+    const custodyStatus = cardCustodyStatus(details);
     const onchainCertification = cardCertificationNumber(details);
     if (!onchainCertification || custodyStatus === null) throw new Error(`Could not read custody for ${fixture.id}`);
-    const owner = await publicClient.readContract({ address: cardAddress, abi: cardAbi, functionName: "ownerOf", args: [tokenId] });
-    if (custodyStatus !== 2 && String(owner).toLowerCase() !== demoBorrower.toLowerCase()) throw new Error(`${fixture.id} is not owned by the demo wallet`);
-    const status = custodyStatus === 1 ? "vaulted" : custodyStatus === 2 ? "pledged" : custodyStatus === 3 ? "released" : null;
+    const status = custodyStatus === 1 ? "vaulted" : custodyStatus === 2 ? "pledged" : custodyStatus === 3 ? "released" : custodyStatus === 4 ? "liquidated" : null;
     if (!status) throw new Error(`${fixture.id} has an unexpected custody status`);
     await db.update(cards).set({ tokenId: tokenId.toString(), tokenContract: cardAddress, certificationNumber: onchainCertification, custodyStatus: status }).where(eq(cards.id, fixture.id));
     await db.update(valuationFixtures).set({ updatedAt: new Date() }).where(eq(valuationFixtures.cardId, fixture.id));

@@ -6,6 +6,7 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 interface IAuctionSettlement {
     function settleAuction(uint256 loanId, uint256 proceeds) external;
@@ -17,6 +18,8 @@ contract LiquidationAuction is IERC721Receiver, ReentrancyGuard {
 
     uint256 public constant DURATION = 3 minutes;
     uint256 public constant MIN_INCREMENT_BPS = 500;
+    uint256 public constant OPENING_BID_BPS = 12_000;
+    uint256 private constant BPS = 10_000;
 
     struct Auction {
         uint256 tokenId;
@@ -59,13 +62,13 @@ contract LiquidationAuction is IERC721Receiver, ReentrancyGuard {
         require(principal != 0 && borrower != address(0), "Invalid loan");
         uint64 endsAt = uint64(block.timestamp + DURATION);
         auctions[loanId] = Auction(tokenId, principal, borrower, endsAt, address(0), 0, false);
-        emit AuctionStarted(loanId, tokenId, endsAt, principal / 2);
+        emit AuctionStarted(loanId, tokenId, endsAt, _openingBid(principal));
     }
 
     function minimumBid(uint256 loanId) public view returns (uint256) {
         Auction memory auction = auctions[loanId];
         require(auction.endsAt != 0, "Unknown auction");
-        if (auction.highestBid == 0) return auction.principal / 2 == 0 ? 1 : auction.principal / 2;
+        if (auction.highestBid == 0) return _openingBid(auction.principal);
         uint256 increment = auction.highestBid * MIN_INCREMENT_BPS / 10_000;
         return auction.highestBid + (increment == 0 ? 1 : increment);
     }
@@ -96,5 +99,9 @@ contract LiquidationAuction is IERC721Receiver, ReentrancyGuard {
         if (proceeds != 0) currency.safeTransfer(address(manager), proceeds);
         manager.settleAuction(loanId, proceeds);
         emit AuctionSettled(loanId, recipient, proceeds, unresolvedPrincipal[loanId]);
+    }
+
+    function _openingBid(uint256 principal) private pure returns (uint256) {
+        return Math.mulDiv(principal, OPENING_BID_BPS, BPS, Math.Rounding.Ceil);
     }
 }

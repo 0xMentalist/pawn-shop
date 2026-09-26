@@ -13,7 +13,7 @@ const sections = [
   },
   {
     title: "Earn",
-    text: "Deposit test MockUSDC into the lending pool. Your pool shares track your position, and you can withdraw when funds are available.",
+    text: "Supply test MockUSDC to the lending pool. Your pool shares track your position, and you can withdraw when liquidity is available.",
     href: "/earn",
     action: "Explore earning",
   },
@@ -39,6 +39,6 @@ export default function DocsPage() {
       <h2 className="text-xl font-semibold tracking-tight">World ID</h2>
       <p className="max-w-prose text-sm leading-7 text-muted-foreground">Choose Orb, NFC Passport, My Number Card, or Selfie Check when you accept a loan. Each method unlocks the same test offer. A connected wallet must own the card.</p>
     </section>
-    <p className="border-t border-border pt-6 text-sm leading-7 text-muted-foreground">Pawn Shop runs on Sepolia with valueless test funds and five simulated vaulted cards. Estimates use dated, grade-matched auction sales of comparable cards; the artwork is a reference image, not a photo of the demo asset. A liquidated card cannot back another loan.</p>
+    <p className="border-t border-border pt-6 text-sm leading-7 text-muted-foreground">Pawn Shop runs on Sepolia with valueless test funds and five simulated vaulted cards. Estimates use dated, grade-matched auction sales of comparable cards; the artwork is a reference image, not a photo of the demo asset. After an auction settles, the new card owner can apply for a loan with a fresh valuation and World ID verification.</p>
   </main>;
 }

@@ -78,11 +78,13 @@ contract LifecycleTest is IERC721Receiver {
         return abi.encodePacked(r, s, v);
     }
 
-    function _originate() private returns (uint256) {
+    function _originate(uint16 termDays) private returns (uint256) {
         registry.registerBorrower(address(this), bytes32(uint256(42)));
         ValuationVerifier.Valuation memory quote = _quote(10_000 * 10 ** 6, bytes32(uint256(1)));
-        return manager.originate(PRINCIPAL, quote, _signature(quote));
+        return manager.originate(PRINCIPAL, termDays, quote, _signature(quote));
     }
+
+    function _originate() private returns (uint256) { return _originate(90); }
 
     function testOriginationEscrowsCardAndLimitsWithdrawals() public {
         uint256 loanId = _originate();
@@ -99,11 +101,11 @@ contract LifecycleTest is IERC721Receiver {
     function testUnverifiedBorrowerAndExcessLtvAreRejected() public {
         ValuationVerifier.Valuation memory quote = _quote(10_000 * 10 ** 6, bytes32(uint256(2)));
         bytes memory signature = _signature(quote);
-        try manager.originate(PRINCIPAL, quote, signature) {
+        try manager.originate(PRINCIPAL, 90, quote, signature) {
             revert("unverified borrower succeeded");
         } catch {}
         registry.registerBorrower(address(this), bytes32(uint256(43)));
-        try manager.originate(PRINCIPAL + 1, quote, signature) {
+        try manager.originate(PRINCIPAL + 1, 90, quote, signature) {
             revert("excess LTV succeeded");
         } catch {}
         require(!verifier.usedNonces(quote.nonce), "failed quote consumed");
@@ -134,6 +136,68 @@ contract LifecycleTest is IERC721Receiver {
         require(pool.realizedInterest() == interest * 7_500 / 10_000, "wrong early lender yield");
     }
 
+    function testThirtyDayTermSetsMaturityAndCapsInterest() public {
+        uint256 loanId = _originate(30);
+        (, , , , uint64 openedAt, uint64 maturity, ) = manager.loans(loanId);
+        require(maturity - openedAt == 30 days, "wrong thirty-day maturity");
+        vm.warp(block.timestamp + 45 days);
+        uint256 interest = PRINCIPAL * manager.APR_BPS() * 30 days / (manager.BPS() * manager.YEAR());
+        require(manager.interestDue(loanId) == interest, "interest passed thirty-day maturity");
+        require(manager.repaymentDue(loanId) == PRINCIPAL + interest, "wrong thirty-day repayment");
+    }
+
+    function testSixtyDayTermControlsDefaultAndAuctionInterest() public {
+        uint256 loanId = _originate(60);
+        (, , , , uint64 openedAt, uint64 maturity, ) = manager.loans(loanId);
+        require(maturity - openedAt == 60 days, "wrong sixty-day maturity");
+        vm.warp(uint256(maturity) + manager.GRACE());
+        try manager.markDefault(loanId) { revert("default during grace"); } catch {}
+        vm.warp(block.timestamp + 1);
+        manager.markDefault(loanId);
+        vm.prank(BIDDER);
+        token.faucet();
+        vm.prank(BIDDER);
+        token.approve(address(auction), type(uint256).max);
+        vm.prank(BIDDER);
+        auction.bid(loanId, PRINCIPAL * 120 / 100);
+        vm.warp(block.timestamp + 3 minutes);
+        auction.settle(loanId);
+        uint256 interest = PRINCIPAL * manager.APR_BPS() * 60 days / (manager.BPS() * manager.YEAR());
+        require(pool.realizedInterest() == interest * manager.LP_INTEREST_BPS() / manager.BPS(), "auction used wrong term interest");
+    }
+
+    function testUnsupportedTermRejectedBeforeQuoteConsumption() public {
+        registry.registerBorrower(address(this), bytes32(uint256(42)));
+        ValuationVerifier.Valuation memory quote = _quote(10_000 * 10 ** 6, bytes32(uint256(99)));
+        bytes memory signature = _signature(quote);
+        uint16[5] memory invalidTerms = [uint16(0), 29, 31, 61, 91];
+        for (uint256 i = 0; i < invalidTerms.length; i++) {
+            (bool succeeded,) = address(manager).call(abi.encodeCall(manager.originate, (PRINCIPAL, invalidTerms[i], quote, signature)));
+            require(!succeeded, "unsupported term succeeded");
+        }
+        require(!verifier.usedNonces(quote.nonce), "invalid term consumed quote");
+    }
+
+    function testRepaymentApprovalCoversInterestWhileWalletIsOpen() public {
+        uint256 loanId = _originate();
+        uint256 openedAt = block.timestamp;
+        vm.warp(openedAt + 1 days);
+        uint256 dueAtApproval = manager.repaymentDue(loanId);
+        token.approve(address(manager), dueAtApproval);
+        vm.warp(openedAt + 2 days);
+        uint256 dueAtRepayment = manager.repaymentDue(loanId);
+        require(dueAtRepayment > dueAtApproval, "interest did not accrue");
+        require(token.allowance(address(this), address(manager)) == dueAtApproval, "unexpected allowance");
+        (bool staleApprovalSucceeded,) = address(manager).call(abi.encodeCall(manager.repay, (loanId)));
+        require(!staleApprovalSucceeded, "stale repayment approval should fail");
+
+        (, , , , uint64 loanOpenedAt, uint64 maturity, ) = manager.loans(loanId);
+        uint256 fullTermDue = PRINCIPAL + PRINCIPAL * manager.APR_BPS() * (maturity - loanOpenedAt) / (manager.BPS() * manager.YEAR());
+        token.approve(address(manager), fullTermDue);
+        manager.repay(loanId);
+        require(card.ownerOf(tokenId) == address(this), "card not returned after full-term approval");
+    }
+
     function testDefaultAuctionAndSurplusWaterfall() public {
         uint256 loanId = _originate();
         vm.warp(block.timestamp + 98 days);
@@ -144,17 +208,98 @@ contract LifecycleTest is IERC721Receiver {
         vm.prank(BIDDER);
         token.approve(address(auction), type(uint256).max);
         vm.prank(BIDDER);
-        auction.bid(loanId, 4_000 * 10 ** 6);
+        auction.bid(loanId, 4_500 * 10 ** 6);
         vm.warp(block.timestamp + 3 minutes);
         uint256 borrowerBefore = token.balanceOf(address(this));
         auction.settle(loanId);
         require(card.ownerOf(tokenId) == BIDDER, "winner did not receive card");
+        require(card.cardDetails(tokenId).custodyStatus == VaultedCardNFT.CustodyStatus.Released, "winner card not released");
         require(pool.deployedPrincipal() == 0, "principal still deployed");
         require(pool.realizedLoss() == 0, "unexpected loss");
         require(pool.realizedInterest() > 0, "lender interest missing");
         require(token.balanceOf(TREASURY) > 0, "protocol fee missing");
         require(token.balanceOf(address(this)) > borrowerBefore, "surplus not returned");
         require(manager.activeLoanForToken(tokenId) == 0, "card still active");
+    }
+
+    function testOpeningBidIsTwentyPercentAbovePrincipal() public {
+        uint256 loanId = _originate();
+        vm.warp(block.timestamp + 98 days);
+        manager.markDefault(loanId);
+        uint256 openingBid = PRINCIPAL * 120 / 100;
+        require(auction.minimumBid(loanId) == openingBid, "wrong opening bid");
+
+        vm.prank(BIDDER);
+        token.faucet();
+        vm.prank(BIDDER);
+        token.approve(address(auction), type(uint256).max);
+        vm.prank(BIDDER);
+        (bool lowBidSucceeded,) = address(auction).call(abi.encodeCall(auction.bid, (loanId, openingBid - 1)));
+        require(!lowBidSucceeded, "bid below opening price succeeded");
+        vm.prank(BIDDER);
+        auction.bid(loanId, openingBid);
+        require(auction.minimumBid(loanId) == openingBid * 105 / 100, "wrong next bid");
+    }
+
+    function testAuctionWinnerCanBorrowAgainstSameCard() public {
+        uint256 firstLoanId = _originate();
+        vm.warp(block.timestamp + 98 days);
+        manager.markDefault(firstLoanId);
+        vm.prank(BIDDER);
+        token.faucet();
+        vm.prank(BIDDER);
+        token.approve(address(auction), type(uint256).max);
+        vm.prank(BIDDER);
+        auction.bid(firstLoanId, 4_500 * 10 ** 6);
+        vm.warp(block.timestamp + 3 minutes);
+        auction.settle(firstLoanId);
+
+        require(card.ownerOf(tokenId) == BIDDER, "winner did not receive card");
+        require(card.cardDetails(tokenId).custodyStatus == VaultedCardNFT.CustodyStatus.Released, "card not available for new owner");
+        vm.prank(BIDDER);
+        card.approve(address(manager), tokenId);
+        ValuationVerifier.Valuation memory freshQuote = _quote(10_000 * 10 ** 6, bytes32(uint256(2)));
+        bytes memory signature = _signature(freshQuote);
+        vm.prank(BIDDER);
+        try manager.originate(PRINCIPAL, 90, freshQuote, signature) {
+            revert("unverified auction winner borrowed");
+        } catch {}
+        require(!verifier.usedNonces(freshQuote.nonce), "failed quote consumed");
+        registry.registerBorrower(BIDDER, bytes32(uint256(43)));
+        vm.prank(BIDDER);
+        uint256 secondLoanId = manager.originate(PRINCIPAL, 90, freshQuote, signature);
+
+        require(secondLoanId != firstLoanId, "old loan reused");
+        require(manager.activeLoanForToken(tokenId) == secondLoanId, "new loan not recorded");
+        (, address newVault,,,,,) = manager.loans(secondLoanId);
+        require(card.ownerOf(tokenId) == newVault, "new loan did not escrow card");
+        require(card.cardDetails(tokenId).custodyStatus == VaultedCardNFT.CustodyStatus.Pledged, "card not pledged again");
+    }
+
+    function testPreviousAuctionWinnerCanBorrowWithLegacyLiquidatedReceipt() public {
+        card.grantRole(card.LOAN_MANAGER_ROLE(), address(this));
+        card.setCustodyStatus(tokenId, VaultedCardNFT.CustodyStatus.Pledged);
+        card.setCustodyStatus(tokenId, VaultedCardNFT.CustodyStatus.Liquidated);
+        card.safeTransferFrom(address(this), BIDDER, tokenId);
+        registry.registerBorrower(BIDDER, bytes32(uint256(43)));
+        vm.prank(BIDDER);
+        card.approve(address(manager), tokenId);
+        ValuationVerifier.Valuation memory quote = _quote(10_000 * 10 ** 6, bytes32(uint256(2)));
+        bytes memory signature = _signature(quote);
+        vm.prank(BIDDER);
+        uint256 newLoanId = manager.originate(PRINCIPAL, 90, quote, signature);
+        require(manager.legacyLiquidatedCollateral(newLoanId), "legacy receipt not tracked");
+        require(manager.activeLoanForToken(tokenId) == newLoanId, "new loan not recorded");
+        require(card.cardDetails(tokenId).custodyStatus == VaultedCardNFT.CustodyStatus.Liquidated, "legacy status changed");
+        vm.prank(BIDDER);
+        token.faucet();
+        vm.prank(BIDDER);
+        token.approve(address(manager), type(uint256).max);
+        vm.warp(block.timestamp + 1 days);
+        vm.prank(BIDDER);
+        manager.repay(newLoanId);
+        require(card.ownerOf(tokenId) == BIDDER, "card not returned to new owner");
+        require(manager.activeLoanForToken(tokenId) == 0, "legacy loan still active");
     }
 
     function testNoBidAuctionRecordsLossAndRecovery() public {
@@ -164,6 +309,7 @@ contract LifecycleTest is IERC721Receiver {
         vm.warp(block.timestamp + 3 minutes);
         auction.settle(loanId);
         require(card.ownerOf(tokenId) == RECOVERY, "recovery wallet missing card");
+        require(card.cardDetails(tokenId).custodyStatus == VaultedCardNFT.CustodyStatus.Released, "recovery card not released");
         require(auction.unresolvedPrincipal(loanId) == PRINCIPAL, "unresolved value missing");
         require(pool.realizedLoss() == PRINCIPAL, "pool loss missing");
         require(pool.totalAssets() == 1_500 * 10 ** 6, "share price did not absorb loss");
@@ -215,7 +361,7 @@ contract LifecycleTest is IERC721Receiver {
         require(card.ownerOf(tokenId) == address(this), "pause blocked repayment");
         card.approve(address(manager), tokenId);
         ValuationVerifier.Valuation memory quote = _quote(10_000 * 10 ** 6, bytes32(uint256(3)));
-        try manager.originate(PRINCIPAL, quote, _signature(quote)) {
+        try manager.originate(PRINCIPAL, 90, quote, _signature(quote)) {
             revert("origination succeeded while paused");
         } catch {}
     }
@@ -224,17 +370,17 @@ contract LifecycleTest is IERC721Receiver {
         registry.registerBorrower(address(this), bytes32(uint256(42)));
         ValuationVerifier.Valuation memory quote = _quote(10_000 * 10 ** 6, bytes32(uint256(4)));
         bytes memory signature = _signature(quote);
-        uint256 loanId = manager.originate(PRINCIPAL, quote, signature);
+        uint256 loanId = manager.originate(PRINCIPAL, 90, quote, signature);
         token.approve(address(manager), type(uint256).max);
         manager.repay(loanId);
         card.approve(address(manager), tokenId);
         require(verifier.usedNonces(quote.nonce), "nonce not consumed");
-        try manager.originate(PRINCIPAL, quote, signature) {
+        try manager.originate(PRINCIPAL, 90, quote, signature) {
             revert("valuation replay succeeded");
         } catch {}
     }
 
-    function testUnderwaterAuctionLowersPoolAssets() public {
+    function testOpeningPriceBidRecoversPrincipal() public {
         uint256 loanId = _originate();
         vm.warp(block.timestamp + 98 days);
         manager.markDefault(loanId);
@@ -243,12 +389,12 @@ contract LifecycleTest is IERC721Receiver {
         vm.prank(BIDDER);
         token.approve(address(auction), type(uint256).max);
         vm.prank(BIDDER);
-        auction.bid(loanId, PRINCIPAL / 2);
+        auction.bid(loanId, PRINCIPAL * 120 / 100);
         vm.warp(block.timestamp + 3 minutes);
         auction.settle(loanId);
-        require(pool.realizedLoss() == PRINCIPAL / 2, "shortfall not recorded");
-        require(pool.totalAssets() == 5_000 * 10 ** 6 - PRINCIPAL / 2, "pool assets did not fall");
-        require(pool.realizedInterest() == 0, "interest paid before principal");
+        require(pool.realizedLoss() == 0, "unexpected principal loss");
+        require(pool.totalAssets() >= 5_000 * 10 ** 6, "pool assets fell despite full recovery");
+        require(pool.realizedInterest() > 0, "lender interest missing");
     }
 
     function testPreviousBidIsRefunded() public {
@@ -256,14 +402,14 @@ contract LifecycleTest is IERC721Receiver {
         vm.warp(block.timestamp + 98 days);
         manager.markDefault(loanId);
         token.approve(address(auction), type(uint256).max);
-        auction.bid(loanId, 2_000 * 10 ** 6);
+        auction.bid(loanId, 4_200 * 10 ** 6);
         uint256 balanceAfterFirstBid = token.balanceOf(address(this));
         vm.prank(BIDDER);
         token.faucet();
         vm.prank(BIDDER);
         token.approve(address(auction), type(uint256).max);
         vm.prank(BIDDER);
-        auction.bid(loanId, 2_100 * 10 ** 6);
-        require(token.balanceOf(address(this)) == balanceAfterFirstBid + 2_000 * 10 ** 6, "previous bid not refunded");
+        auction.bid(loanId, 4_500 * 10 ** 6);
+        require(token.balanceOf(address(this)) == balanceAfterFirstBid + 4_200 * 10 ** 6, "previous bid not refunded");
     }
 }

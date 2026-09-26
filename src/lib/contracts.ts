@@ -18,6 +18,8 @@ export const contracts = {
   registry: address(process.env.NEXT_PUBLIC_HUMAN_REGISTRY_ADDRESS),
   pool: address(process.env.NEXT_PUBLIC_LENDING_POOL_ADDRESS),
   manager: address(process.env.NEXT_PUBLIC_LOAN_MANAGER_ADDRESS),
+  legacyManagers: (process.env.NEXT_PUBLIC_LEGACY_LOAN_MANAGER_ADDRESSES || process.env.NEXT_PUBLIC_PREVIOUS_LOAN_MANAGER_ADDRESS || "")
+    .split(",").map((value) => address(value.trim())).filter((value): value is Address => Boolean(value)),
   auction: address(process.env.NEXT_PUBLIC_AUCTION_ADDRESS),
 } as const;
 

@@ -1,8 +1,9 @@
 import "server-only";
 
 import { randomBytes } from "node:crypto";
-import { isAddress, type Address, type Hex } from "viem";
+import { createPublicClient, http, isAddress, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { sepolia } from "viem/chains";
 import { getDemoCard } from "@/lib/data";
 import { createDemoPrice } from "@/lib/demo-price";
 
@@ -32,12 +33,18 @@ export async function issueSignedValuation(cardId: string) {
   if (!isAddress(record.card.tokenContract)) throw new ValuationError(503, "The card contract address is invalid.");
 
   const now = Math.floor(Date.now() / 1000);
+  const chain = createPublicClient({ chain: sepolia, transport: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL, { timeout: 10_000 }) });
+  let blockTime: bigint;
+  try { blockTime = (await chain.getBlock()).timestamp; }
+  catch { throw new ValuationError(503, "Sepolia block time is unavailable. Try again."); }
+  if (BigInt(now) - blockTime > 120n) throw new ValuationError(503, "Sepolia is delayed. Try again shortly.");
+  const issuedAt = blockTime < BigInt(now) ? blockTime : BigInt(now);
   const valuation = {
     cardContract: record.card.tokenContract as Address,
     tokenId: BigInt(record.card.tokenId),
     value: BigInt(record.valuation.appraisedMicroUsdc),
     currency: currency as Address,
-    issuedAt: BigInt(now),
+    issuedAt,
     expiresAt: BigInt(now + QUOTE_SECONDS),
     nonce: `0x${randomBytes(32).toString("hex")}` as Hex,
   };

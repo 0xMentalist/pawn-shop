@@ -41,6 +41,8 @@ pnpm deploy:sepolia
 
 `deploy:check` only reads the network and balance. `deploy:sepolia` sends transactions, saves checkpoints in `deployments/sepolia.json`, and fills public contract addresses in `.env.local`. Rerunning it resumes from the saved contracts. Restart Next.js after deployment so public addresses are included in the client bundle.
 
+The active auction requires an opening bid of 120% of loan principal; later bids increase by at least 5%. The replacement market reuses MockUSDC, card NFTs, the World registry, and the valuation verifier. It deploys a new pool, vault factory, loan manager, and auction because the manager accepts an auction address only once. The latest migration used `pnpm deploy:fresh`, `pnpm pool:rollover-demo`, and `pnpm deploy:activate`. Rollover moves only deployer-owned test liquidity, preserving every outstanding loan and at least 1,000 MockUSDC of old-pool liquidity. Activation saves previous addresses in `deployments/sepolia-previous.json` and archives older markets in `deployments/archive/`. The app reads active legacy loans from the manager addresses in `NEXT_PUBLIC_LEGACY_LOAN_MANAGER_ADDRESSES`, so their borrowers can still repay. `pnpm deploy:pause-previous` stops new borrowing on the retired manager. To fit the MultiBaas ten-contract plan, the retired pool event links were removed while their managers and auctions stayed linked; `pnpm curvegrid:setup` then linked the new market. ENS subnames were updated with `pnpm ens:protocol:setup`. Restart Next.js after changing public addresses.
+
 Set `DEMO_BORROWER_ADDRESS` to the wallet that should own the sample portfolio, then run:
 
 ```sh
@@ -50,7 +52,7 @@ pnpm card:mint-portfolio
 
 The public landing page is at `/`. The Borrow page shows the card picker only after wallet connection. It reads Sepolia ownership for the five catalog NFTs and includes a card escrowed for an active loan when the connected wallet is the borrower. Other wallets see an empty collection; minting additional cards is currently an operator demo workflow.
 
-The mint scripts record public checkpoints in `deployments/`, link the NFTs to SQLite cards, and refresh the demo valuation fixtures. Their metadata explicitly describes simulated custody. If a demo card is liquidated, rerunning its mint script creates a new fictional certificate; the liquidated token remains ineligible for another loan. `pnpm pool:seed-demo` targets 11,000 valueless MockUSDC, enough for all five maximum demo loans together. A fresh deployment may need a second faucet claim after the one-day cooldown to reach that target; the script deposits the available amount meanwhile. On the testnet deployment, the borrower or protocol admin can click **Advance demo loan to default** after origination. This charges full 90-day interest and makes the loan immediately default-eligible, allowing the three-minute auction to fit into a live walkthrough. The control is disabled when `LoanManager` is constructed with `demoMode=false`.
+The mint scripts record public checkpoints in `deployments/`, link the NFTs to SQLite cards, and refresh the demo valuation fixtures. Their metadata explicitly describes simulated custody. They retain a card's original token ID after an auction instead of minting a duplicate. The replacement loan manager accepts both newly auctioned receipts and older NFTs still marked `Liquidated`, provided the current owner is World-verified and gets a fresh signed valuation. `pnpm pool:seed-demo` calculates enough valueless MockUSDC to cover all five current maximum demo loans. A fresh deployment may need a second faucet claim after the one-day cooldown to reach that target; the script deposits the available amount meanwhile. On the testnet deployment, the borrower or protocol admin can click **Advance demo loan to default** after origination. This charges interest for the selected 30-, 60-, or 90-day term and makes the loan immediately default-eligible, allowing the three-minute auction to fit into a live walkthrough. The control is disabled when `LoanManager` is constructed with `demoMode=false`.
 
 ## ENSv2 identity and delegation on Sepolia
 
@@ -85,7 +87,7 @@ A [World staging simulator](https://github.com/worldcoin/simulator/blob/main/doc
 
 ## Activity and auctions
 
-The activity and auction pages pull confirmed events from the public Sepolia RPC into SQLite. An idempotent cursor advances through blocks; transactions link to Etherscan. This remains the development fallback. The `POST /api/curvegrid/webhook` endpoint validates MultiBaas HMAC signatures and timestamps, accepts only events from the deployed contracts, decodes their indexed logs, and deduplicates them in SQLite. Set `CURVEGRID_WEBHOOK_SECRET` to activate it. The activity page now reads MultiBaas indexed events on the server and deduplicates them with the direct RPC history by transaction hash and log index. The webhook receiver is ready for a public HTTPS deployment.
+The activity page pulls confirmed events from the public Sepolia RPC into SQLite with an idempotent cursor; transactions link to Etherscan. It also reads MultiBaas indexed events and deduplicates them against RPC history by transaction hash and log index. The Auctions page reads current auction state from the active manager and auction contracts, falling back to locally indexed events during brief RPC failures. The `POST /api/curvegrid/webhook` endpoint validates MultiBaas HMAC signatures and timestamps, accepts only events from the deployed contracts, decodes their indexed logs, and deduplicates them in SQLite. Set `CURVEGRID_WEBHOOK_SECRET` to activate it; remote delivery needs a public HTTPS deployment.
 
 ### Curvegrid setup
 
@@ -98,7 +100,7 @@ See Curvegrid's [quickstart](https://docs.curvegrid.com/multibaas/getting-starte
 
 ## Current limits
 
-This is a hackathon demo, not a production lending deployment. The collection is a simulated receipt, the currency has a public faucet, and the terms are fixed at 35% maximum LTV, 20% simple APR, 90 days, and a seven-day grace period. The ENSv2 identities, protocol subnames, and scoped appraiser disclosure are live on Sepolia. Curvegrid API event reads are active. Smart-account onboarding and remote webhook delivery still require additional work or external access. World ID's staging proof path is verified end to end; a real person's production World App flow remains to be exercised.
+This is a hackathon demo, not a production lending deployment. The collection is a simulated receipt, the currency has a public faucet, and loans use 35% maximum LTV, 20% simple APR, a borrower-selected 30-, 60-, or 90-day term, and a seven-day grace period. Interest accrues for the actual time borrowed up to the selected maturity. The ENSv2 identities, protocol subnames, and scoped appraiser disclosure are live on Sepolia. Curvegrid API event reads are active. Smart-account onboarding and remote webhook delivery still require additional work or external access. World ID's staging proof path is verified end to end; a real person's production World App flow remains to be exercised.
 
 ## Realyse market signal
 

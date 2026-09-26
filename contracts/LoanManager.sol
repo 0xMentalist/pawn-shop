@@ -26,7 +26,8 @@ contract LoanManager is AccessControl, Pausable, ReentrancyGuard {
     uint256 public constant APR_BPS = 2_000;
     uint256 public constant LP_INTEREST_BPS = 7_500;
     uint256 public constant PROTOCOL_INTEREST_BPS = 1_500;
-    uint256 public constant TERM = 90 days;
+    uint16 public constant MIN_TERM_DAYS = 30;
+    uint16 public constant MAX_TERM_DAYS = 90;
     uint256 public constant GRACE = 7 days;
     uint256 public constant MAX_PRINCIPAL = 3_500 * 10 ** 6;
     uint256 public constant YEAR = 365 days;
@@ -56,6 +57,7 @@ contract LoanManager is AccessControl, Pausable, ReentrancyGuard {
     uint256 public nextLoanId = 1;
     mapping(uint256 => Loan) public loans;
     mapping(uint256 => uint256) public activeLoanForToken;
+    mapping(uint256 => bool) public legacyLiquidatedCollateral;
 
     event AuctionSet(address indexed auction);
     event LoanOriginated(uint256 indexed loanId, address indexed borrower, uint256 indexed tokenId, address vault, uint256 principal, uint64 maturity);
@@ -97,28 +99,37 @@ contract LoanManager is AccessControl, Pausable, ReentrancyGuard {
     function pauseOriginations() external onlyRole(DEFAULT_ADMIN_ROLE) { _pause(); }
     function resumeOriginations() external onlyRole(DEFAULT_ADMIN_ROLE) { _unpause(); }
 
-    function originate(uint256 principal, ValuationVerifier.Valuation calldata valuation, bytes calldata signature)
+    function originate(uint256 principal, uint16 termDays, ValuationVerifier.Valuation calldata valuation, bytes calldata signature)
         external whenNotPaused nonReentrant returns (uint256 loanId)
     {
         require(humanRegistry.isVerifiedBorrower(msg.sender), "World verification required");
+        require(termDays == 30 || termDays == 60 || termDays == 90, "Invalid loan term");
         require(principal != 0 && principal <= MAX_PRINCIPAL, "Invalid principal");
         require(principal <= valuation.value * MAX_LTV_BPS / BPS, "LTV exceeded");
         require(valuation.tokenId != 0 && activeLoanForToken[valuation.tokenId] == 0, "Card already pledged");
         require(card.ownerOf(valuation.tokenId) == msg.sender, "Not card owner");
         VaultedCardNFT.CustodyStatus custody = card.cardDetails(valuation.tokenId).custodyStatus;
-        require(custody == VaultedCardNFT.CustodyStatus.Vaulted || custody == VaultedCardNFT.CustodyStatus.Released, "Card not vaulted");
+        require(
+            custody == VaultedCardNFT.CustodyStatus.Vaulted ||
+            custody == VaultedCardNFT.CustodyStatus.Released ||
+            custody == VaultedCardNFT.CustodyStatus.Liquidated,
+            "Card not vaulted"
+        );
         require(pool.availableLiquidity() >= principal, "Insufficient liquidity");
 
         valuationVerifier.consume(valuation, signature);
         loanId = nextLoanId++;
         bytes32 salt = keccak256(abi.encode(address(card), valuation.tokenId, msg.sender, loanId));
         address vault = vaultFactory.deployLoanVault(salt, msg.sender, card, valuation.tokenId);
-        uint64 maturity = uint64(block.timestamp + TERM);
+        uint64 maturity = uint64(block.timestamp + uint256(termDays) * 1 days);
         loans[loanId] = Loan(msg.sender, vault, valuation.tokenId, principal, uint64(block.timestamp), maturity, Status.Active);
         activeLoanForToken[valuation.tokenId] = loanId;
+        // Older receipts remain Liquidated after auction; ownership and escrow still enforce exclusivity.
+        bool legacyLiquidated = custody == VaultedCardNFT.CustodyStatus.Liquidated;
+        legacyLiquidatedCollateral[loanId] = legacyLiquidated;
 
         card.safeTransferFrom(msg.sender, vault, valuation.tokenId);
-        card.setCustodyStatus(valuation.tokenId, VaultedCardNFT.CustodyStatus.Pledged);
+        if (!legacyLiquidated) card.setCustodyStatus(valuation.tokenId, VaultedCardNFT.CustodyStatus.Pledged);
         pool.draw(principal, msg.sender);
         emit LoanOriginated(loanId, msg.sender, valuation.tokenId, vault, principal, maturity);
     }
@@ -151,7 +162,7 @@ contract LoanManager is AccessControl, Pausable, ReentrancyGuard {
         currency.forceApprove(address(pool), principal + lenderInterest + reserveContribution);
         pool.settle(principal, principal, lenderInterest, reserveContribution);
         if (protocolFee != 0) currency.safeTransfer(treasury, protocolFee);
-        card.setCustodyStatus(loan.tokenId, VaultedCardNFT.CustodyStatus.Released);
+        if (!legacyLiquidatedCollateral[loanId]) card.setCustodyStatus(loan.tokenId, VaultedCardNFT.CustodyStatus.Released);
         LoanVault(loan.vault).releaseToBorrower();
         emit LoanRepaid(loanId, msg.sender, principal, interest);
     }
@@ -190,7 +201,7 @@ contract LoanManager is AccessControl, Pausable, ReentrancyGuard {
 
         uint256 principalRecovered = proceeds < loan.principal ? proceeds : loan.principal;
         uint256 remaining = proceeds - principalRecovered;
-        uint256 grossInterest = loan.principal * APR_BPS * TERM / (BPS * YEAR);
+        uint256 grossInterest = loan.principal * APR_BPS * (loan.maturity - loan.openedAt) / (BPS * YEAR);
         uint256 lenderInterest = _min(remaining, grossInterest * LP_INTEREST_BPS / BPS);
         remaining -= lenderInterest;
         uint256 protocolFee = _min(remaining, grossInterest * PROTOCOL_INTEREST_BPS / BPS);
@@ -203,7 +214,8 @@ contract LoanManager is AccessControl, Pausable, ReentrancyGuard {
         pool.settle(loan.principal, principalRecovered, lenderInterest, reserveContribution);
         if (protocolFee != 0) currency.safeTransfer(treasury, protocolFee);
         if (remaining != 0) currency.safeTransfer(loan.borrower, remaining);
-        card.setCustodyStatus(loan.tokenId, VaultedCardNFT.CustodyStatus.Liquidated);
+        // The custody receipt follows the NFT to the auction recipient.
+        if (!legacyLiquidatedCollateral[loanId]) card.setCustodyStatus(loan.tokenId, VaultedCardNFT.CustodyStatus.Released);
         emit LoanSettled(loanId, proceeds, principalRecovered, lenderInterest, protocolFee, reserveContribution, remaining);
     }
 

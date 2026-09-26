@@ -16,7 +16,7 @@ const borrowSteps = [
 
 const earnSteps = [
   { title: "Get test funds", detail: "Connect on Sepolia and claim MockUSDC from the faucet." },
-  { title: "Deposit", detail: "Choose an amount to add to the shared lending pool." },
+  { title: "Supply", detail: "Choose an amount to supply to the lending pool." },
   { title: "Track and withdraw", detail: "Your pool shares track your position. Withdraw when funds are available." },
 ];
 
@@ -37,10 +37,10 @@ export function HowItWorksProvider({ children }: { children: React.ReactNode }) 
 
   return <OpenDialogContext.Provider value={open}>
     {children}
-    <dialog ref={dialogRef} aria-labelledby={titleId} onClick={(event) => { if (event.target === event.currentTarget) close(); }} className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto rounded-md border border-border bg-card p-0 text-card-foreground shadow-2xl backdrop:bg-foreground/55">
+    <dialog ref={dialogRef} aria-labelledby={titleId} onClick={(event) => { if (event.target === event.currentTarget) close(); }} className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto rounded-2xl border border-border bg-card p-0 text-card-foreground shadow-2xl backdrop:bg-foreground/55">
       <div className="flex items-start justify-between gap-6 border-b border-border px-5 py-5 sm:px-7 sm:py-6">
         <div><h2 id={titleId} className="font-display text-3xl font-semibold sm:text-4xl">How it works</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">Borrow against a card or earn by lending to fellow collectors.</p></div>
-        <button type="button" onClick={close} aria-label="Close how it works" className="inline-flex size-10 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><X className="size-5" aria-hidden="true" /></button>
+        <button type="button" onClick={close} aria-label="Close how it works" className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><X className="size-5" aria-hidden="true" /></button>
       </div>
       <div className="grid md:grid-cols-2">
         <section className="border-b border-border px-5 py-6 sm:px-7 md:border-b-0 md:border-r"><h3 className="font-display text-xl font-semibold">Borrow</h3><Steps items={borrowSteps} /></section>

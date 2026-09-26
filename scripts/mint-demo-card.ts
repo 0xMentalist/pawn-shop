@@ -28,18 +28,6 @@ if (!record) throw new Error("Run pnpm db:migrate and pnpm db:seed first");
 
 type DemoCheckpoint = { card: Address; tokenId: string; borrower: Address; txHash: Hex };
 
-async function nextDemoCertification(current: string) {
-  const match = current.match(/^(.*?)(\d+)$/);
-  const prefix = match?.[1] ?? `${current}-`;
-  let serial = match ? Number(match[2]) + 1 : 2;
-  for (;;) {
-    const candidate = `${prefix}${String(serial).padStart(match?.[2].length ?? 1, "0")}`;
-    const used = await publicClient.readContract({ address: cardAddress, abi: compiled.abi, functionName: "certificationUsed", args: [keccak256(toBytes(candidate))] });
-    if (used === false) return candidate;
-    serial++;
-  }
-}
-
 async function mintCard(certificationNumber: string): Promise<DemoCheckpoint> {
   const attestation = keccak256(toBytes(`simulated-demo-custody:${certificationNumber}`));
   const evidence = getDemoCardEvidence(record.id);
@@ -84,22 +72,12 @@ try {
     checkpoint = await mintCard(record.certificationNumber);
     await writeFile(checkpointPath, `${JSON.stringify(checkpoint, null, 2)}\n`);
   }
-  let tokenId = BigInt(checkpoint.tokenId);
-  const owner = await publicClient.readContract({ address: cardAddress, abi: compiled.abi, functionName: "ownerOf", args: [tokenId] });
+  const tokenId = BigInt(checkpoint.tokenId);
   const details = await publicClient.readContract({ address: cardAddress, abi: compiled.abi, functionName: "cardDetails", args: [tokenId] });
-  let certificationNumber = cardCertificationNumber(details);
-  let custodyStatus = cardCustodyStatus(details);
+  const certificationNumber = cardCertificationNumber(details);
+  const custodyStatus = cardCustodyStatus(details);
   if (!certificationNumber || custodyStatus === null) throw new Error("Could not read demo card custody details");
-  if (custodyStatus === 4) {
-    certificationNumber = await nextDemoCertification(certificationNumber);
-    checkpoint = await mintCard(certificationNumber);
-    tokenId = BigInt(checkpoint.tokenId);
-    custodyStatus = 1;
-    await writeFile(checkpointPath, `${JSON.stringify(checkpoint, null, 2)}\n`);
-  } else if (String(owner).toLowerCase() !== borrower.toLowerCase() && custodyStatus !== 2) {
-    throw new Error("Onchain owner does not match DEMO_BORROWER_ADDRESS");
-  }
-  const status = custodyStatus === 1 ? "vaulted" : custodyStatus === 2 ? "pledged" : custodyStatus === 3 ? "released" : null;
+  const status = custodyStatus === 1 ? "vaulted" : custodyStatus === 2 ? "pledged" : custodyStatus === 3 ? "released" : custodyStatus === 4 ? "liquidated" : null;
   if (!status) throw new Error(`Unexpected card custody status: ${custodyStatus}`);
   await db.update(cards).set({ tokenId: tokenId.toString(), tokenContract: cardAddress, certificationNumber, custodyStatus: status }).where(eq(cards.id, record.id));
   await db.update(valuationFixtures).set({ updatedAt: new Date() }).where(eq(valuationFixtures.cardId, record.id));

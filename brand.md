@@ -1,15 +1,19 @@
-# Brand — Collector Credit
+# Collector Credit — brand direction
 
-_Status: deferred_
+A friendly card binder for a collectible backed test loan. The interface should feel tactile and familiar: cream paper, warm mats around the cards, ink colored text, and a single cobalt accent for actions and selected states. Keep sale and loan figures easy to scan.
 
-The user chose to defer brand setup. This project is currently using shadcn's default neutral palette and no custom typography. The `frontend-design-guidelines` skill will quietly use defaults and will not prompt again.
+## Type
 
-To set up a real brand palette, typography, and voice at any time, run:
+- **Fraunces** for page titles, card names, and major values. Its rounded serifs give the collection some personality.
+- **IBM Plex Sans** for navigation, controls, terms, and body copy.
+- System monospace, sparingly, for PSA references, demo receipt numbers, and small collection counts.
 
-    /brand-design
+Both primary faces are loaded through `next/font` with `display: swap`.
 
-or say: "pick brand colors"
+## Color roles
 
-When `brand-design` runs, it will detect this deferred state, skip the "confirm overwrite" step, and proceed directly to the full brand setup. The resulting palette will be applied to `src/app/globals.css` and this file will be replaced with the real brand documentation.
+CSS custom properties in `src/app/globals.css` are the source of truth. `--background` is warm cream; `--card` is near white; `--secondary` is the card mat; `--foreground` is navy ink; `--primary` is cobalt; `--border` is a soft warm line. Dark mode uses the same ink and cobalt relationship at suitable contrast.
 
-_Deferred at: 2026-09-25_
+## Components and copy
+
+Keep surfaces flat with visible borders. Show one primary action per view and let collectible artwork carry the personality. Use direct, consumer language: “Pick your card,” “See loan offer,” and “Manage your loan.” Show PSA reference numbers as comparable sale evidence, separate from the demo receipt attached to the simulated NFT.

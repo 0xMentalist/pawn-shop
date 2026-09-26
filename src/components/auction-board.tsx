@@ -9,11 +9,13 @@ import { Input } from "@/components/ui/input";
 import { abis, contracts, SEPOLIA_CHAIN_ID } from "@/lib/contracts";
 import { formatUsdc } from "@/lib/loan-math";
 
-export function AuctionBoard({ loanIds }: { loanIds: string[] }) {
-  return <div className="grid gap-4">{loanIds.map((id) => <AuctionItem key={id} loanId={BigInt(id)} />)}</div>;
+type AuctionCard = { name: string; grade: string; imageUrl: string; psaReferenceNumber: string; saleSourceUrl: string };
+
+export function AuctionBoard({ loanIds, cards }: { loanIds: string[]; cards: Record<string, AuctionCard> }) {
+  return <div className="grid gap-4">{loanIds.map((id) => <AuctionItem key={id} loanId={BigInt(id)} cards={cards} />)}</div>;
 }
 
-function AuctionItem({ loanId }: { loanId: bigint }) {
+function AuctionItem({ loanId, cards }: { loanId: bigint; cards: Record<string, AuctionCard> }) {
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -27,6 +29,7 @@ function AuctionItem({ loanId }: { loanId: bigint }) {
   const minBid = useReadContract({ address: contracts.auction, abi: abis.auction, functionName: "minimumBid", args: [loanId], chainId: SEPOLIA_CHAIN_ID, query: { enabled: Boolean(contracts.auction), refetchInterval: 15_000 } });
   const tokenBalance = useReadContract({ address: contracts.mockUsdc, abi: abis.mockUsdc, functionName: "balanceOf", args: [address ?? zeroAddress], chainId: SEPOLIA_CHAIN_ID, query: { enabled: ready, refetchInterval: 15_000 } });
   const details = Array.isArray(auction.data) ? auction.data : null;
+  const card = details ? cards[String(details[0])] : undefined;
   const endsAt = details ? Number(details[3]) * 1000 : 0;
   const settled = details ? Boolean(details[6]) : false;
   const closed = now >= endsAt;
@@ -73,7 +76,7 @@ function AuctionItem({ loanId }: { loanId: bigint }) {
   }
 
   if (!details || endsAt === 0) return <Card><CardContent className="p-5 text-sm text-muted-foreground">Loading auction #{loanId.toString()}…</CardContent></Card>;
-  return <Card><CardHeader><CardTitle>Card #{String(details[0])} · Loan #{loanId.toString()}</CardTitle><CardDescription>{settled ? "Settled" : closed ? "Bidding closed · ready to settle" : `Open until ${new Date(endsAt).toLocaleString()}`}</CardDescription></CardHeader><CardContent className="space-y-4">
+  return <Card><CardHeader className="gap-4 sm:flex-row sm:items-center">{card ? <div className="flex h-36 w-28 shrink-0 items-center justify-center bg-secondary p-2"><img src={card.imageUrl} alt={`${card.name} card artwork`} className="h-full w-auto max-w-full object-contain" /></div> : null}<div className="space-y-1"><CardTitle className="text-2xl">{card ? `${card.name} · PSA ${card.grade}` : `Card #${String(details[0])}`}</CardTitle><CardDescription>Card #{String(details[0])} · Loan #{loanId.toString()} · {settled ? "Settled" : closed ? "Bidding closed · ready to settle" : `Open until ${new Date(endsAt).toLocaleString()}`}</CardDescription>{card ? <a className="font-serial inline-flex min-h-8 items-center text-xs font-semibold text-primary underline underline-offset-4" href={card.saleSourceUrl} target="_blank" rel="noopener noreferrer">Comparable PSA reference #{card.psaReferenceNumber}</a> : null}</div></CardHeader><CardContent className="space-y-4">
     <div className="grid gap-3 text-sm sm:grid-cols-3"><div><p className="text-xs text-muted-foreground">Outstanding principal</p><p className="mt-1 font-semibold tabular-nums">{formatUsdc(details[1] as bigint)}</p></div><div><p className="text-xs text-muted-foreground">{settled ? "Winning bid" : "Highest bid"}</p><p className="mt-1 font-semibold tabular-nums">{formatUsdc(details[5] as bigint)}</p></div>{!settled ? <div><p className="text-xs text-muted-foreground">Next minimum</p><p className="mt-1 font-semibold tabular-nums">{minimum ? formatUsdc(minimum) : "—"}</p></div> : null}</div>
     {!settled && !closed ? <form className="flex flex-col gap-3 sm:flex-row" onSubmit={(event) => { event.preventDefault(); void bid(); }}><div className="flex-1"><label htmlFor={`auction-bid-${loanId}`} className="sr-only">Your bid in MockUSDC</label><Input id={`auction-bid-${loanId}`} type="text" inputMode="decimal" placeholder="Bid in MockUSDC" value={amount} onChange={(event) => setAmount(event.target.value)} /></div><Button type="submit" disabled={!ready || busy || !entered || entered < minimum}>Place bid</Button></form> : null}
     {!settled && closed ? <Button type="button" disabled={!ready || busy} onClick={() => void settle()}>Settle auction</Button> : null}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export function SiteFooter() {
-  return <footer className="mt-auto border-t border-border">
+  return <footer className="mt-auto border-t border-border bg-card">
     <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-6 text-sm text-muted-foreground md:px-6 lg:px-8">
       <p>Sepolia testnet · No real funds or physical cards</p>
       <nav aria-label="More information" className="flex gap-5">

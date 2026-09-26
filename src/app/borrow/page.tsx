@@ -15,7 +15,7 @@ export default async function BorrowPage() {
     <BorrowFlow assets={records.map(({ card, valuation }) => {
       const evidence = getDemoCardEvidence(card.id);
       if (!evidence) throw new Error(`Missing card evidence for ${card.id}`);
-      return { id: card.id, name: card.name, setName: card.setName, printing: evidence.printing, year: card.year, grader: card.grader, grade: card.grade, certificationNumber: card.certificationNumber, psaReferenceNumber: evidence.psaReferenceNumber, tokenId: card.tokenId, imageUrl: evidence.imageUrl, saleObservedAt: evidence.saleObservedAt, saleSourceUrl: evidence.saleSourceUrl, valueMicroUsdc: valuation.appraisedMicroUsdc };
+      return { id: card.id, name: card.name, setName: card.setName, printing: evidence.printing, year: card.year, grader: card.grader, grade: card.grade, psaReferenceNumber: evidence.psaReferenceNumber, tokenId: card.tokenId, imageUrl: evidence.imageUrl, saleObservedAt: evidence.saleObservedAt, saleSourceUrl: evidence.saleSourceUrl, valueMicroUsdc: valuation.appraisedMicroUsdc };
     })} worldConfig={worldConfig} />
   </main>;
 }

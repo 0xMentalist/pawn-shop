@@ -8,7 +8,7 @@ A clean, minimal interface for card-backed borrowing and lending. A simple three
 ## Type
 
 - **IBM Plex Sans** for page titles, card names, values, navigation, controls, and body copy. Larger sizes and tighter tracking carry the hierarchy.
-- System monospace, sparingly, for PSA references, demo receipt numbers, and small collection counts.
+- System monospace, sparingly, for PSA reference numbers and other technical identifiers users need to check.
 
 IBM Plex Sans is loaded through `next/font` with `display: swap`.
 
@@ -18,4 +18,4 @@ CSS custom properties in `src/app/globals.css` are the source of truth. `--backg
 
 ## Components and copy
 
-Keep surfaces flat with visible borders, generous spacing, and one primary action per view. Use direct language: “Go to app,” “Connect your wallet,” “See loan offer,” and “Manage your loan.” Only show the card picker after wallet connection and successful ownership checks. Show PSA reference numbers as comparable sale evidence, separate from the demo receipt attached to the simulated NFT.
+Keep surfaces flat with visible borders, generous spacing, and one primary action per view. Use direct language: “Go to app,” “Connect your wallet,” “See loan offer,” and “Manage your loan.” Only show the card picker after wallet connection and successful ownership checks. Keep grade and comparable PSA references visible, without extra badges or decorative labels. Show test currency details where the loan or deposit amount is presented.

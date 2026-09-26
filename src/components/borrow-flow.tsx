@@ -15,7 +15,7 @@ import type { DemoPrice } from "@/lib/demo-price";
 import { formatUsdc, GRACE_DAYS, maximumPrincipal, simpleInterest, TERM_DAYS } from "@/lib/loan-math";
 import { cardBelongsToWallet } from "@/lib/wallet-cards";
 
-type Asset = { id: string; name: string; setName: string; printing: string; year: number; grader: string; grade: string; certificationNumber: string; psaReferenceNumber: string; tokenId: string | null; imageUrl: string; saleObservedAt: string; saleSourceUrl: string; valueMicroUsdc: number };
+type Asset = { id: string; name: string; setName: string; printing: string; year: number; grader: string; grade: string; psaReferenceNumber: string; tokenId: string | null; imageUrl: string; saleObservedAt: string; saleSourceUrl: string; valueMicroUsdc: number };
 type WorldConfig = { appId: string; rpId: string; environment: "production" | "staging" } | null;
 const maximumDemoPrincipal = 3_500_000_000n;
 
@@ -63,10 +63,9 @@ function BorrowCollection({ assets, worldConfig }: { assets: Asset[]; worldConfi
   const selected = assets.find((asset) => asset.id === selectedId) ?? assets[0];
   return <div className="space-y-6">
     <h1 className="font-display text-4xl font-semibold leading-tight md:text-5xl">Pick your card.</h1>
-    <div className="flex items-end justify-between gap-4 border-b pb-3"><h2 className="font-display text-2xl font-semibold">The collection</h2><span className="font-serial text-xs text-muted-foreground">{assets.length} CARDS</span></div>
     <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 md:mx-0 md:px-0">{assets.map((asset) => <button key={asset.id} type="button" aria-pressed={selected?.id === asset.id} aria-label={`Select ${asset.name}, PSA ${asset.grade}, comparable PSA reference ${asset.psaReferenceNumber}, sale ${formatUsdc(asset.valueMicroUsdc)}`} onClick={() => setSelectedId(asset.id)} className={`collection-slot group w-40 shrink-0 snap-start rounded-md border p-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-44 lg:min-w-0 lg:grow ${selected?.id === asset.id ? "border-primary bg-accent" : "border-border bg-card hover:border-primary"}`}>
-      <span className="relative flex h-36 items-center justify-center bg-secondary p-2"><img src={asset.imageUrl} alt="" className="collection-art h-full w-auto max-w-full object-contain drop-shadow-sm" /><span className="font-serial absolute right-2 top-2 border border-border bg-card px-1.5 py-1 text-xs font-semibold text-foreground">PSA {asset.grade}</span></span>
-      <span className="block px-1 pb-1 pt-3"><span className="block truncate font-display text-lg font-semibold leading-tight">{asset.name}</span><span className="mt-1 block text-xs text-muted-foreground">{asset.year} · {asset.setName}</span><span className="mt-3 block text-base font-semibold tabular-nums">{formatUsdc(asset.valueMicroUsdc)}</span><span className="font-serial mt-1 block text-xs text-muted-foreground">PSA REF #{asset.psaReferenceNumber}</span></span>
+      <span className="flex h-36 items-center justify-center bg-secondary p-2"><img src={asset.imageUrl} alt="" className="collection-art h-full w-auto max-w-full object-contain drop-shadow-sm" /></span>
+      <span className="block px-1 pb-1 pt-3"><span className="block truncate font-display text-lg font-semibold leading-tight">{asset.name}</span><span className="mt-1 block text-xs text-muted-foreground">{asset.year} · {asset.setName} · PSA {asset.grade}</span><span className="mt-3 block text-base font-semibold tabular-nums">{formatUsdc(asset.valueMicroUsdc)}</span><span className="font-serial mt-1 block text-xs text-muted-foreground">PSA REF #{asset.psaReferenceNumber}</span></span>
     </button>)}</div>
     {selected ? <BorrowDetail key={selected.id} asset={selected} worldConfig={worldConfig} /> : null}
   </div>;
@@ -121,11 +120,10 @@ function BorrowDetail({ asset, worldConfig }: { asset: Asset; worldConfig: World
     {view === "card" ? <section className="grid overflow-hidden rounded-md border bg-card lg:grid-cols-2">
       <div className="flex min-h-80 flex-col items-center justify-center bg-secondary px-6 py-8 lg:min-h-[32rem]"><img src={asset.imageUrl} alt={`${asset.name} ${asset.printing} card artwork`} className="max-h-96 w-auto max-w-full object-contain drop-shadow-lg" /></div>
       <div className="flex flex-col p-6 md:p-8 lg:p-10">
-        <div className="font-serial text-xs font-semibold uppercase tracking-widest text-primary">{asset.year} / {asset.setName}</div>
-        <h2 className="font-display mt-3 text-4xl font-semibold leading-tight md:text-5xl">{asset.name}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{asset.printing} · {asset.grader} {asset.grade}</p>
+        <h2 className="font-display text-4xl font-semibold leading-tight md:text-5xl">{asset.name}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{asset.year} {asset.setName} · {asset.printing} · {asset.grader} {asset.grade}</p>
         <div className="mt-8 border-t pt-6"><p className="text-sm text-muted-foreground">Last recorded auction sale</p><p className="font-display mt-1 text-5xl font-semibold tabular-nums">{formatUsdc(asset.valueMicroUsdc)}</p><p className="mt-1 text-sm text-muted-foreground">{new Date(asset.saleObservedAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })}</p></div>
-        <dl className="mt-7 space-y-3 border-t pt-6 text-sm"><div className="flex flex-wrap items-baseline justify-between gap-2"><dt className="text-muted-foreground">Comparable PSA reference</dt><dd><a aria-label={`View comparable PSA certificate ${asset.psaReferenceNumber}`} className="font-serial inline-flex items-center gap-1 font-semibold text-primary underline underline-offset-4 hover:text-foreground" href={asset.saleSourceUrl} target="_blank" rel="noopener noreferrer">#{asset.psaReferenceNumber}<ExternalLink className="size-3" aria-hidden="true" /></a></dd></div><div className="flex flex-wrap items-baseline justify-between gap-2"><dt className="text-muted-foreground">Demo receipt</dt><dd className="font-serial">{asset.certificationNumber}</dd></div></dl>
+        <dl className="mt-7 border-t pt-6 text-sm"><div className="flex flex-wrap items-baseline justify-between gap-2"><dt className="text-muted-foreground">Comparable PSA reference</dt><dd><a aria-label={`View comparable PSA certificate ${asset.psaReferenceNumber}`} className="font-serial inline-flex items-center gap-1 font-semibold text-primary underline underline-offset-4 hover:text-foreground" href={asset.saleSourceUrl} target="_blank" rel="noopener noreferrer">#{asset.psaReferenceNumber}<ExternalLink className="size-3" aria-hidden="true" /></a></dd></div></dl>
         <div className="mt-auto pt-8">
           {hasLoan && isBorrower ? <Button type="button" className="w-full" onClick={() => setView("offer")}>Manage your loan<ArrowRight className="size-4" aria-hidden="true" /></Button> : null}
           {custodyStatus === 4 ? <p role="status" className="text-sm text-destructive">This card was liquidated and cannot back another loan.</p> : null}

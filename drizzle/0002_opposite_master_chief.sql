@@ -1,0 +1,1 @@
+ALTER TABLE `identity_authorizations` ADD `credential_type` text;

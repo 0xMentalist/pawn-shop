@@ -1,0 +1,14 @@
+node_modules
+.pnpm-store
+.next
+.env*
+!.env.example
+*.db
+*.db-*
+.DS_Store
+*.tsbuildinfo
+artifacts
+.hardhat-cache
+coverage
+data/ens-commitment.json
+data/ens-protocol-commitment.json

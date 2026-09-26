@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1790320549990,
+      "tag": "0000_freezing_supreme_intelligence",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790334759781,
+      "tag": "0001_lumpy_rage",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790360961040,
+      "tag": "0002_opposite_master_chief",
+      "breakpoints": true
+    }
+  ]
+}

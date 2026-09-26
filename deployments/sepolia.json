@@ -1,0 +1,34 @@
+{
+  "chainId": 11155111,
+  "deployer": "0x3999FF89d09AF0fb45DF243D7a4a3c9299e5c69B",
+  "contracts": {
+    "MockUSDC": "0xf8c090eed83896f2e87f49dc3b181da7b3e4036a",
+    "VaultedCardNFT": "0xbd636cc5a919f63b10e20b5c0212081bb9b80ba1",
+    "HumanVerificationRegistry": "0x470ea1d6b607adaab8808bf0e47a399894e803e2",
+    "ValuationVerifier": "0xcf648adcd6ee93efc35649e3e5ab85227efd4eaa",
+    "LendingPool": "0x878c8a776222b631be66bfdd3256ad0489807969",
+    "LoanVaultFactory": "0xa8db47775d848081026539833f5b9cc72a95b76f",
+    "LoanManager": "0xcfb728820f07bcd5cd91c20986dd2e612637eca1",
+    "LiquidationAuction": "0xfc00d0228176530f76493564248a99d0fbbd48cd"
+  },
+  "transactionHashes": {
+    "MockUSDC": "0xa1509f18ef3c54c05f978d636450b54b0d50c3781435eb7961f1f4750b8273c3",
+    "VaultedCardNFT": "0x2e66d71be5df41c7f33063c0846d27c48214f754d068ead9c8410171b29fc146",
+    "HumanVerificationRegistry": "0x8732138df7585d1ea860fc5ade6d30d4be109e5a512ca114e3bdaaa46a472045",
+    "ValuationVerifier": "0x19040d3413bb7a7086cb9ca0e107c578c2b607f891bcc7bbd00f58ac4675e5de",
+    "LendingPool": "0x1cc041025e6cf38c762e364fae98fd32ab7fbfec19d52ee8c54116acbff56e86",
+    "LoanVaultFactory": "0xdc995e38e1517b08ff1f14671b887d840d42e84f9ca2ecdaad248a57d37b43b0",
+    "LoanManager": "0xa55c9fc4f6789595a9242d50493f44cb86595b85c1fbf87f0c4eda8132ca5bbb",
+    "LiquidationAuction": "0xc46006f51cf9ea5cea4db7756074c4308f2b1cf84ac95ed71b44b2f50831ae55"
+  },
+  "blockNumbers": {
+    "MockUSDC": 11779001,
+    "VaultedCardNFT": 11779003,
+    "HumanVerificationRegistry": 11779005,
+    "ValuationVerifier": 11779006,
+    "LendingPool": 11779007,
+    "LoanVaultFactory": 11779009,
+    "LoanManager": 11779011,
+    "LiquidationAuction": 11779012
+  }
+}

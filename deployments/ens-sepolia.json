@@ -1,0 +1,17 @@
+{
+  "chainId": 11155111,
+  "name": "cardloanstest.eth",
+  "owner": "0xADc360fD724a714c585604389BC7dd07DB355Ee0",
+  "payer": "0x3999FF89d09AF0fb45DF243D7a4a3c9299e5c69B",
+  "transactions": {
+    "resolver": "0x99e0629d3ce72defbef36c1196589b682ae23abfee4522afb49982429d9d7d29",
+    "subregistry": "0x90ff837a3fee200bb3610c16aa7f85c4c14fa3051c3b9324fa9c828dc8c14fb8",
+    "mint": "0x306a97ca98977a30012c97ceb955a7398d8f583d626b528aea48f77b430c0d14",
+    "approve": "0x71456c7d7ed713a9d3fd3f72963eae21d10b34bc361bc47dd5df6b6bfcc4e059",
+    "commit": "0xa6745e1bde75c79bf13a74e51f4ee06e59a1383284ddc33dd7e1ad937056c231",
+    "register": "0xa4271e726f32a35a75ed6ae548b37b6b88d854b41685f78a93e8137528df5d0c"
+  },
+  "resolver": "0x1a7C70F44e9d834cbfeB6B599EA68a8535f81eA9",
+  "subregistry": "0xBeE477c2b2D015804013161AA4e15A2B73079722",
+  "commitment": "0xd0d53afbd5c2279177e2026d97f6bd78b945ecc88844dca9adb9709a08db6cc9"
+}

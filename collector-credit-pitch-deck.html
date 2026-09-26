@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Collector Credit - ETHGlobal Tokyo Pitch</title>
+  <style>
+    :root {
+      --ink: #111318; --paper: #f7f6f2; --panel: #ffffff; --line: #d9d7d0;
+      --red: #d83a35; --green: #087f5b; --yellow: #f5c451; --muted: #63676f;
+      --shadow: 0 24px 70px rgba(17,19,24,.13);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--ink); }
+    body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); }
+    button { font: inherit; }
+    .deck { position: relative; width: 100vw; height: 100vh; }
+    .slide { position: absolute; inset: 0; display: grid; align-content: center; gap: 28px; padding: clamp(34px, 6vw, 92px); background: var(--paper); opacity: 0; pointer-events: none; transition: opacity .25s ease; }
+    .slide.active { opacity: 1; pointer-events: auto; }
+    .slide.dark { color: #fff; background: var(--ink); }
+    .slide.red { color: #fff; background: var(--red); }
+    .eyebrow { font-size: clamp(12px, 1.3vw, 18px); font-weight: 800; text-transform: uppercase; letter-spacing: 0; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { max-width: 1100px; font-size: clamp(52px, 9vw, 126px); line-height: .92; letter-spacing: 0; }
+    h2 { max-width: 1120px; font-size: clamp(38px, 6vw, 82px); line-height: 1; letter-spacing: 0; }
+    h3 { font-size: clamp(23px, 2.5vw, 36px); line-height: 1.08; }
+    .lead { max-width: 980px; font-size: clamp(20px, 2.8vw, 38px); line-height: 1.25; color: var(--muted); }
+    .dark .lead, .red .lead { color: rgba(255,255,255,.72); }
+    .accent { color: var(--red); }
+    .tagrow, .metricrow { display: flex; flex-wrap: wrap; gap: 12px; }
+    .tag { border: 1px solid currentColor; padding: 8px 13px; font-size: clamp(13px, 1.3vw, 18px); font-weight: 750; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+    .card { min-height: 185px; padding: 28px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+    .dark .card { color: #fff; background: #1b1e24; border-color: #343840; }
+    .card p { margin-top: 13px; font-size: clamp(17px, 1.7vw, 24px); line-height: 1.35; color: var(--muted); }
+    .dark .card p { color: #b5bac3; }
+    .metric { min-width: 175px; padding: 18px 20px; border-left: 5px solid var(--red); background: #fff; box-shadow: var(--shadow); }
+    .metric b { display: block; font-size: clamp(26px, 3vw, 44px); }
+    .metric span { color: var(--muted); font-size: 15px; font-weight: 700; }
+    .flow { display: flex; align-items: stretch; gap: 8px; }
+    .step { flex: 1; display: grid; place-items: center; min-height: 145px; padding: 20px; border: 1px solid var(--line); background: #fff; text-align: center; font-size: clamp(17px, 1.8vw, 26px); font-weight: 800; }
+    .arrow { display: grid; place-items: center; font-size: 28px; color: var(--red); }
+    table { width: 100%; border-collapse: collapse; background: #fff; font-size: clamp(13px, 1.35vw, 20px); }
+    th, td { padding: 13px 15px; border-bottom: 1px solid var(--line); text-align: left; }
+    th { color: var(--muted); font-size: .8em; text-transform: uppercase; }
+    td:not(:first-child), th:not(:first-child) { text-align: center; }
+    .yes { color: var(--green); font-weight: 900; }
+    .no { color: #a5a7ac; }
+    .stack { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .stack .card { border-top: 7px solid var(--red); }
+    .formula { padding: 20px 24px; border: 1px solid var(--line); background: #fff; font: 700 clamp(17px, 2vw, 27px) ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .notes { display: none; }
+    .chrome { position: fixed; z-index: 20; left: 20px; right: 20px; bottom: 18px; display: flex; align-items: center; justify-content: space-between; color: rgba(255,255,255,.65); mix-blend-mode: difference; }
+    .controls { display: flex; gap: 8px; }
+    .controls button { width: 42px; height: 36px; border: 1px solid currentColor; border-radius: 4px; color: inherit; background: transparent; cursor: pointer; }
+    .progress { position: fixed; z-index: 30; left: 0; bottom: 0; height: 5px; background: var(--yellow); transition: width .25s ease; }
+    .source { position: absolute; right: 40px; bottom: 30px; max-width: 55%; color: var(--muted); font-size: 11px; text-align: right; }
+    @media (max-width: 760px) {
+      .slide { align-content: start; overflow-y: auto; padding: 54px 24px 72px; }
+      .grid3, .grid2, .stack { grid-template-columns: 1fr; }
+      .flow { flex-direction: column; }
+      .arrow { transform: rotate(90deg); }
+      table { font-size: 11px; }
+      th, td { padding: 9px 6px; }
+      .source { position: static; max-width: none; text-align: left; }
+    }
+    @media print {
+      html, body { overflow: visible; background: #fff; }
+      .deck { height: auto; }
+      .slide { position: relative; width: 100vw; height: 100vh; opacity: 1; pointer-events: auto; page-break-after: always; }
+      .chrome, .progress { display: none; }
+    }
+  </style>
+</head>
+<body>
+<main class="deck" aria-label="Collector Credit pitch deck">
+  <section class="slide dark active">
+    <div class="eyebrow">Collector Credit / ETHGlobal Tokyo</div>
+    <h1>Keep the card.<br><span style="color:var(--yellow)">Unlock the cash.</span></h1>
+    <p class="lead">Instant loans backed by tokenized, vaulted graded cards.</p>
+    <div class="tagrow"><span class="tag">Pokemon collateral</span><span class="tag">Sepolia</span><span class="tag">Complete credit lifecycle</span></div>
+    <aside class="notes">This Charizard may be worth $10,000, but its owner has to sell it to access a dollar. Collector Credit lets them borrow against it instead.</aside>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow accent">The problem</div>
+    <h2>Valuable. Authenticated.<br><span class="accent">Still illiquid.</span></h2>
+    <div class="grid3">
+      <div class="card"><h3>Selling ends ownership</h3><p>The collector gives up the asset and its future upside.</p></div>
+      <div class="card"><h3>Loans are bespoke</h3><p>Pricing, custody, underwriting, and settlement are fragmented.</p></div>
+      <div class="card"><h3>Vaulted value sits idle</h3><p>Digital ownership exists, but a usable credit layer is missing.</p></div>
+    </div>
+    <p class="source">Sources: PSA Vault; Courtyard documentation. See content document for links.</p>
+    <aside class="notes">Grading tells us what the card is. Vaulting tells us where it is. Tokenization tells us who owns it. None of those gives the collector credit.</aside>
+  </section>
+
+  <section class="slide red">
+    <div class="eyebrow">The solution</div>
+    <h2>One asset. One quote.<br>One transaction.</h2>
+    <div class="flow">
+      <div class="step" style="color:var(--ink)">1. Verify borrower</div><div class="arrow" style="color:#fff">→</div>
+      <div class="step" style="color:var(--ink)">2. Price + lock card</div><div class="arrow" style="color:#fff">→</div>
+      <div class="step" style="color:var(--ink)">3. Receive MockUSDC</div>
+    </div>
+    <div class="metricrow">
+      <div class="metric"><b>$10K</b><span>APPRAISED VALUE</span></div>
+      <div class="metric"><b>35%</b><span>MAX LTV</span></div>
+      <div class="metric"><b>$3.5K</b><span>PRINCIPAL</span></div>
+      <div class="metric"><b>20%</b><span>FIXED APR</span></div>
+    </div>
+    <aside class="notes">An appraiser signs a short-lived valuation. The NFT and loan principal move atomically.</aside>
+  </section>
+
+  <section class="slide dark">
+    <div class="eyebrow" style="color:var(--yellow)">Live demo</div>
+    <h2>Every outcome.<br>Not just origination.</h2>
+    <div class="flow">
+      <div class="step" style="color:var(--ink)">Lender deposits</div><div class="arrow">→</div>
+      <div class="step" style="color:var(--ink)">Borrower draws</div><div class="arrow">→</div>
+      <div class="step" style="color:var(--ink)">Interest accrues</div><div class="arrow">→</div>
+      <div class="step" style="color:var(--ink)">Repay or auction</div>
+    </div>
+    <div class="tagrow"><span class="tag">World ID gated</span><span class="tag">ENSv2 permissioned</span><span class="tag">Curvegrid indexed</span><span class="tag">Onchain settlement</span></div>
+    <aside class="notes">Run the live flow here. Clearly label simulated custody receipt, valuation fixtures, and accelerated time.</aside>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow accent">The trust stack</div>
+    <h2>Three protocols remove<br>three trust gaps.</h2>
+    <div class="stack">
+      <div class="card"><h3>World ID</h3><p>One eligible human. Sybil-resistant loan authorization, not decorative login.</p></div>
+      <div class="card"><h3>ENSv2</h3><p>Named borrower, appraiser, custodian, and settlement roles with scoped permissions.</p></div>
+      <div class="card"><h3>Curvegrid</h3><p>Indexed loans, liquidity, bids, settlements, and webhook-driven servicing.</p></div>
+    </div>
+    <aside class="notes">These integrations each do a product job. Show one failed World proof or denied ENS update if time permits.</aside>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow accent">Lender economics</div>
+    <h2>Yield comes from<br><span class="accent">paid borrower interest.</span></h2>
+    <div class="grid2">
+      <div class="card"><h3>5.25% estimated APY</h3><p>20% borrower APR x 35% utilization x 75% LP share.</p></div>
+      <div class="card"><h3>12% estimated APY</h3><p>20% borrower APR x 80% utilization x 75% LP share.</p></div>
+    </div>
+    <div class="formula">LP APY = borrower APR x utilization x LP share</div>
+    <p class="lead">Overcollateralization reduces risk. It does not erase it.</p>
+    <aside class="notes">Do not call this guaranteed yield. Auction shortfalls reduce the pool share price.</aside>
+  </section>
+
+  <section class="slide">
+    <div class="eyebrow accent">Positioning</div>
+    <h2>Tokenization exists.<br>The credit layer is emerging.</h2>
+    <table>
+      <thead><tr><th>Product</th><th>Card tokens</th><th>Pooled capital</th><th>Human gate</th><th>Permissions</th><th>Default flow</th></tr></thead>
+      <tbody>
+        <tr><td>Courtyard</td><td class="yes">Yes</td><td class="no">No</td><td>Platform</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td>Slab.Finance</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>MLKY</td><td class="yes">Issuer assets</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td>Described</td></tr>
+        <tr><td><b>Collector Credit</b></td><td>Demo asset</td><td class="yes">Yes</td><td class="yes">World ID</td><td class="yes">ENSv2</td><td class="yes">Live</td></tr>
+      </tbody>
+    </table>
+    <aside class="notes">Competitors validate the category. Our hackathon differentiation is the operating trust stack and complete judge-visible lifecycle.</aside>
+  </section>
+
+  <section class="slide dark">
+    <div class="eyebrow" style="color:var(--yellow)">Collector Credit</div>
+    <h2>Tokenization made cards transferable.<br><span style="color:var(--yellow)">We make them productive.</span></h2>
+    <div class="tagrow"><span class="tag">World ID</span><span class="tag">ENSv2</span><span class="tag">Curvegrid MultiBaas</span></div>
+    <p class="lead">Demo: [TBD URL]<br>Code: [TBD GitHub]<br>Team: [TBD names]</p>
+    <aside class="notes">Today we demonstrated one card, one pool, and every outcome from origination to liquidation.</aside>
+  </section>
+</main>
+<div class="chrome"><span id="counter">1 / 8</span><div class="controls"><button id="prev" aria-label="Previous slide">←</button><button id="next" aria-label="Next slide">→</button></div></div>
+<div class="progress" id="progress"></div>
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  let index = 0;
+  function show(next) {
+    index = (next + slides.length) % slides.length;
+    slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+    document.getElementById('counter').textContent = `${index + 1} / ${slides.length}`;
+    document.getElementById('progress').style.width = `${((index + 1) / slides.length) * 100}%`;
+  }
+  document.getElementById('prev').addEventListener('click', () => show(index - 1));
+  document.getElementById('next').addEventListener('click', () => show(index + 1));
+  document.addEventListener('keydown', event => {
+    if (['ArrowRight', 'PageDown', ' '].includes(event.key)) show(index + 1);
+    if (['ArrowLeft', 'PageUp'].includes(event.key)) show(index - 1);
+    if (event.key === 'Home') show(0);
+    if (event.key === 'End') show(slides.length - 1);
+  });
+  show(0);
+</script>
+</body>
+</html>

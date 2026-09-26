@@ -54,13 +54,13 @@ export function WorldVerification({ config, wallet, onVerified }: { config: Worl
     finally { setBusy(false); }
   }
 
-  return <div className="space-y-3">
-    <fieldset disabled={!config || busy || open} className="space-y-2">
-      <legend className="text-sm font-medium">Verify with World ID</legend>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {methods.map((option) => <label key={option.id} className={`flex cursor-pointer gap-3 rounded-md border p-3 text-sm ${method === option.id ? "border-primary bg-accent" : "border-border"}`}>
-          <input type="radio" name="world-verification-method" value={option.id} checked={method === option.id} onChange={() => chooseMethod(option.id)} className="mt-1 accent-primary" />
+  return <div className="space-y-4 border-t border-border pt-6">
+    <fieldset disabled={!config || busy || open}>
+      <legend className="mb-3 text-sm font-semibold">World ID</legend>
+      <div className="divide-y divide-border border-y border-border">
+        {methods.map((option) => <label key={option.id} className="flex min-h-12 cursor-pointer items-center justify-between gap-3 px-1 text-sm focus-within:rounded-sm focus-within:ring-2 focus-within:ring-ring">
           <span className="font-medium">{option.label}</span>
+          <input type="radio" name="world-verification-method" value={option.id} checked={method === option.id} onChange={() => chooseMethod(option.id)} className="size-4 accent-primary" />
         </label>)}
       </div>
     </fieldset>

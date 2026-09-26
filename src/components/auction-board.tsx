@@ -79,6 +79,6 @@ function AuctionItem({ loanId }: { loanId: bigint }) {
     {!settled && closed ? <Button type="button" disabled={!ready || busy} onClick={() => void settle()}>Settle auction</Button> : null}
     {!settled ? !isConnected ? <p className="text-xs text-muted-foreground">Connect a wallet to bid or settle.</p> : chainId !== SEPOLIA_CHAIN_ID ? <p className="text-xs text-muted-foreground">Switch your wallet to Sepolia.</p> : <p className="text-xs text-muted-foreground">Your MockUSDC: {typeof tokenBalance.data === "bigint" ? formatUsdc(tokenBalance.data) : "—"}</p> : null}
     {message ? <p role="status" className="text-xs">{message}</p> : null}
-    {hash ? <a className="block text-xs underline underline-offset-4" target="_blank" rel="noopener noreferrer" href={`https://sepolia.etherscan.io/tx/${hash}`}>View latest transaction</a> : null}
+    {hash ? <a className="inline-flex min-h-10 items-center rounded-sm text-sm underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" target="_blank" rel="noopener noreferrer" href={`https://sepolia.etherscan.io/tx/${hash}`}>View latest transaction</a> : null}
   </CardContent></Card>;
 }

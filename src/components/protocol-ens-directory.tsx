@@ -1,19 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowUpRight, Building2, FilePenLine, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, Building2, FilePenLine } from "lucide-react";
 import { keccak256, parseAbi, stringToHex, toHex, zeroAddress, type Address, type Hex } from "viem";
 import { normalize, packetToBytes } from "viem/ens";
 import { useAccount, useEnsAddress, useEnsText, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { contracts } from "@/lib/contracts";
 import {
   ENS_SEPOLIA_CHAIN_ID, PROTOCOL_ENS_APPRAISER_ADDRESS, PROTOCOL_ENS_APPRAISER_NOTE_KEY,
   PROTOCOL_ENS_APPRAISER_RESOLVER, PROTOCOL_ENS_NAME, PROTOCOL_ENS_OWNER,
-  PROTOCOL_ENS_REGISTRATION_TX, PROTOCOL_ENS_SUBREGISTRY,
+  PROTOCOL_ENS_REGISTRATION_TX,
 } from "@/lib/ens";
 
 const resolverAbi = parseAbi([
@@ -26,16 +25,15 @@ const noteResource = BigInt(keccak256(stringToHex(PROTOCOL_ENS_APPRAISER_NOTE_KE
 const appraiserName = `appraiser.${PROTOCOL_ENS_NAME}`;
 const dnsAppraiserName = toHex(packetToBytes(normalize(appraiserName)));
 
-function IdentityRow({ name, expected, description }: { name: string; expected: Address | undefined; description: string }) {
+function IdentityRow({ name, expected }: { name: string; expected: Address | undefined }) {
   const resolved = useEnsAddress({ name, chainId: ENS_SEPOLIA_CHAIN_ID });
   const matches = Boolean(expected && resolved.data?.toLowerCase() === expected.toLowerCase());
   return <div className="flex flex-wrap items-start justify-between gap-3 border-t border-border py-4 first:border-t-0 first:pt-0 last:pb-0">
     <div className="min-w-0">
       <p className="font-medium">{name}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       <p className="mt-1 break-all font-mono text-xs text-muted-foreground">{resolved.data ?? "Resolving on Sepolia…"}</p>
     </div>
-    <Badge variant={matches ? "secondary" : "warning"}>{matches ? "Resolved" : "Checking"}</Badge>
+    <span className="text-sm text-muted-foreground">{matches ? "Resolved" : "Checking…"}</span>
   </div>;
 }
 
@@ -86,31 +84,27 @@ export function ProtocolEnsDirectory() {
   return <div className="space-y-6">
     <Card>
       <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><Building2 className="size-5" aria-hidden="true" /><CardTitle>Protocol directory</CardTitle></div><Badge variant="outline">ENSv2 · Sepolia</Badge></div>
-        <CardDescription>The protocol wallet owns the root. Names point to the onchain appraiser signer, lending pool, and auction contract.</CardDescription>
+        <div className="flex items-center gap-2"><Building2 className="size-5" aria-hidden="true" /><CardTitle>Protocol names</CardTitle></div>
       </CardHeader>
       <CardContent>
-        <div className="mb-5 rounded-md bg-secondary/50 p-4"><p className="text-lg font-semibold">{PROTOCOL_ENS_NAME}</p><p className="mt-1 break-all font-mono text-xs text-muted-foreground">Owner: {PROTOCOL_ENS_OWNER}</p><p className="mt-1 break-all font-mono text-xs text-muted-foreground">Subregistry: {PROTOCOL_ENS_SUBREGISTRY}</p></div>
-        <IdentityRow name={PROTOCOL_ENS_NAME} expected={PROTOCOL_ENS_OWNER} description="Protocol testnet wallet" />
-        <IdentityRow name={appraiserName} expected={PROTOCOL_ENS_APPRAISER_ADDRESS} description="Demo valuation signer" />
-        <IdentityRow name={`pool.${PROTOCOL_ENS_NAME}`} expected={contracts.pool} description="Lending pool contract" />
-        <IdentityRow name={`auction.${PROTOCOL_ENS_NAME}`} expected={contracts.auction} description="Liquidation auction contract" />
-        <a href={`https://sepolia.etherscan.io/tx/${PROTOCOL_ENS_REGISTRATION_TX}`} target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-1 text-xs underline underline-offset-4">View root registration <ArrowUpRight className="size-3" aria-hidden="true" /></a>
+        <IdentityRow name={PROTOCOL_ENS_NAME} expected={PROTOCOL_ENS_OWNER} />
+        <IdentityRow name={appraiserName} expected={PROTOCOL_ENS_APPRAISER_ADDRESS} />
+        <IdentityRow name={`pool.${PROTOCOL_ENS_NAME}`} expected={contracts.pool} />
+        <IdentityRow name={`auction.${PROTOCOL_ENS_NAME}`} expected={contracts.auction} />
+        <a href={`https://sepolia.etherscan.io/tx/${PROTOCOL_ENS_REGISTRATION_TX}`} target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex min-h-10 items-center gap-1 rounded-sm text-sm underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">View root registration <ArrowUpRight className="size-3" aria-hidden="true" /></a>
       </CardContent>
     </Card>
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2"><FilePenLine className="size-5" aria-hidden="true" /><CardTitle>Delegated disclosure</CardTitle></div>
-        <CardDescription>The appraiser wallet can edit one text key on its dedicated resolver. It cannot edit that resolver’s address record or unrelated text keys.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-wrap gap-2"><Badge variant={scoped ? "secondary" : "warning"}><ShieldCheck className="size-3" aria-hidden="true" />{scoped ? "Key-scoped permission verified" : "Checking delegation"}</Badge><Badge variant="outline">Does not authorize valuations</Badge></div>
-        <div className="rounded-md bg-secondary/50 p-4"><p className="text-xs text-muted-foreground">Current ENS record · {PROTOCOL_ENS_APPRAISER_NOTE_KEY}</p><p className="mt-2 text-sm">{note.data || "No disclosure published"}</p></div>
+        <p className="text-sm text-muted-foreground">{scoped ? "Appraiser record access verified" : "Checking record access…"}</p>
+        <div className="border-y border-border py-4"><p className="text-sm text-muted-foreground">Current record · {PROTOCOL_ENS_APPRAISER_NOTE_KEY}</p><p className="mt-2 text-sm">{note.data || "No disclosure published"}</p></div>
         <div className="space-y-2"><label className="text-xs font-medium" htmlFor="appraiser-note">Update disclosure</label><Input id="appraiser-note" value={draft} maxLength={160} onChange={(event) => setDraft(event.target.value)} placeholder="Short appraiser disclosure" /></div>
         <Button type="button" variant="outline" disabled={!isConnected || chainId !== ENS_SEPOLIA_CHAIN_ID || busy || role.isPending || !draft.trim()} onClick={() => void updateNote()}>{busy ? "Checking ENS…" : canWrite ? "Publish with connected wallet" : "Test denied edit"}</Button>
-        <p className="text-xs leading-5 text-muted-foreground">Connect the appraiser wallet to publish. An unrelated wallet can test the denied action without spending gas. The protocol owner retains administrative recovery rights.</p>
         {message ? <p className="text-xs leading-5" role="status">{message}</p> : null}
-        {hash ? <a href={`https://sepolia.etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer" className="text-xs underline underline-offset-4">View record transaction</a> : null}
+        {hash ? <a href={`https://sepolia.etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 items-center rounded-sm text-sm underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">View record transaction</a> : null}
       </CardContent>
     </Card>
   </div>;

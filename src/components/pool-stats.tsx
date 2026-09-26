@@ -22,7 +22,7 @@ export function PoolStats() {
     { label: "Estimated APY", value: enabled && utilization.data !== undefined ? `${(Number(estimatedLpApyBps(rawUtilization)) / 100).toFixed(2)}%` : "—" },
   ];
   return <>
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{items.map((item) => <Card key={item.label}><CardContent className="pt-6"><p className="text-xs font-medium text-muted-foreground">{item.label}</p><p className="mt-3 text-3xl font-semibold tabular-nums">{item.value}</p></CardContent></Card>)}</div>
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{items.map((item) => <Card key={item.label}><CardContent className="p-4 sm:p-6"><p className="text-xs font-medium text-muted-foreground">{item.label}</p><p className="mt-2 text-xl font-semibold tracking-tight tabular-nums sm:text-2xl lg:text-3xl">{item.value}</p></CardContent></Card>)}</div>
     {enabled ? <p className="text-xs text-muted-foreground">Reserve {typeof reserve.data === "bigint" ? formatUsdc(reserve.data) : "—"} · Realized losses {typeof losses.data === "bigint" ? formatUsdc(losses.data) : "—"}</p> : null}
   </>;
 }

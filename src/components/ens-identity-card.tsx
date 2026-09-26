@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUpRight, BadgeCheck, Fingerprint, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, Fingerprint } from "lucide-react";
 import { parseAbi, toHex, zeroAddress, type Hex } from "viem";
 import { normalize, packetToBytes } from "viem/ens";
 import { useAccount, useEnsAddress, useEnsText, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ENS_OWNER_ADDRESS,
   ENS_REGISTRATION_TX,
@@ -70,29 +69,25 @@ export function EnsIdentityCard() {
 
   return <Card>
     <CardHeader>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2"><Fingerprint className="size-5" aria-hidden="true" /><CardTitle>Borrower identity</CardTitle></div>
-        <Badge variant="outline">ENSv2 · Sepolia</Badge>
-      </div>
-      <CardDescription>The borrower controls this name. Resolver record permissions are separate from loan permissions.</CardDescription>
+      <div className="flex items-center gap-2"><Fingerprint className="size-5" aria-hidden="true" /><CardTitle>Borrower name</CardTitle></div>
     </CardHeader>
     <CardContent className="space-y-4">
-      <div className="rounded-md border border-border bg-secondary/50 p-4">
+      <div>
         <p className="text-lg font-semibold">{ENS_ROOT_NAME}</p>
         <p className="mt-1 break-all text-xs text-muted-foreground">{ENS_OWNER_ADDRESS}</p>
-        <div className="mt-3 flex flex-wrap gap-2"><Badge variant={registered ? "secondary" : "warning"}><BadgeCheck className="size-3" aria-hidden="true" />{registered ? "Ownership verified" : "Checking ownership"}</Badge><Badge variant={resolves ? "secondary" : "warning"}><ShieldCheck className="size-3" aria-hidden="true" />{resolves ? "Address resolves" : "Checking resolution"}</Badge></div>
+        <p className="mt-3 text-sm text-muted-foreground">{registered && resolves ? "Ownership and address verified" : "Checking onchain records…"}</p>
       </div>
       <div className="grid gap-3 text-sm sm:grid-cols-2">
         <div><p className="text-muted-foreground">Subname registry</p><p className="font-medium">Borrower controlled</p><p className="break-all text-xs text-muted-foreground">{ENS_SUBREGISTRY_ADDRESS}</p></div>
-        <div><p className="text-muted-foreground">Role record</p><p className="font-medium">{record.data ? `${ENS_TEXT_ROLE_KEY}: ${record.data}` : "Not published yet"}</p><p className="text-xs text-muted-foreground">Only a wallet with the ENSv2 text role can update it.</p></div>
+        <div><p className="text-muted-foreground">Role record</p><p className="font-medium">{record.data ? `${ENS_TEXT_ROLE_KEY}: ${record.data}` : "Not published yet"}</p></div>
       </div>
-      {isConnected ? <div className="rounded-md border border-border p-3 text-xs">Connected wallet: {role.data === true ? "text-record permission granted" : role.data === false ? "text-record permission denied" : "checking permission"}</div> : <p className="text-xs text-muted-foreground">Connect a wallet to test its ENSv2 permission.</p>}
+      {isConnected ? <p className="text-sm text-muted-foreground">Connected wallet: {role.data === true ? "record access granted" : role.data === false ? "record access denied" : "checking access"}</p> : null}
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" variant="outline" disabled={!isConnected || chainId !== ENS_SEPOLIA_CHAIN_ID || busy || role.isPending} onClick={() => void demonstratePermission()}>{busy ? "Checking ENS…" : canWrite ? "Publish borrower role" : "Test record permission"}</Button>
-        <a className="inline-flex min-h-10 items-center gap-1 text-xs underline underline-offset-4" href={`https://sepolia.etherscan.io/tx/${ENS_REGISTRATION_TX}`} target="_blank" rel="noopener noreferrer">Registration transaction <ArrowUpRight className="size-3" aria-hidden="true" /></a>
+        <a className="inline-flex min-h-10 items-center gap-1 rounded-sm text-sm underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={`https://sepolia.etherscan.io/tx/${ENS_REGISTRATION_TX}`} target="_blank" rel="noopener noreferrer">Registration transaction <ArrowUpRight className="size-3" aria-hidden="true" /></a>
       </div>
       {message ? <p className="text-xs leading-5" role="status">{message}</p> : null}
-      {hash ? <a className="text-xs underline underline-offset-4" href={`https://sepolia.etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer">View record transaction</a> : null}
+      {hash ? <a className="inline-flex min-h-10 items-center rounded-sm text-sm underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href={`https://sepolia.etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer">View record transaction</a> : null}
     </CardContent>
   </Card>;
 }

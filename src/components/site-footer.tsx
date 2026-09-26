@@ -1,0 +1,13 @@
+import Link from "next/link";
+
+export function SiteFooter() {
+  return <footer className="mt-auto border-t border-border">
+    <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-6 text-sm text-muted-foreground md:px-6 lg:px-8">
+      <p>Sepolia testnet · No real funds or physical cards</p>
+      <nav aria-label="More information" className="flex gap-5">
+        <Link href="/docs" className="inline-flex min-h-10 items-center rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">How it works</Link>
+        <Link href="/identity" className="inline-flex min-h-10 items-center rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Protocol</Link>
+      </nav>
+    </div>
+  </footer>;
+}

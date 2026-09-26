@@ -1,6 +1,6 @@
 # Collector Credit
 
-A Sepolia demo lending market for a simulated vaulted collectible card. The in-app [How it works](http://localhost:3000/docs) guide explains the full flow, integrations, and FAQ. The interface uses Next.js 16, shadcn-style neutral components, Reown AppKit, Drizzle, and SQLite. Contracts use Hardhat 3 and OpenZeppelin. MockUSDC is a valueless test token; the seeded card is a simulated custody receipt.
+A Sepolia demo lending market for a simulated vaulted collectible card. The in-app [How it works](http://localhost:3000/docs) page covers the user flow; this README records the implementation and integration details. The interface uses Next.js 16, shadcn-style neutral components, Reown AppKit, Drizzle, and SQLite. Contracts use Hardhat 3 and OpenZeppelin. MockUSDC is a valueless test token; the seeded card is a simulated custody receipt.
 
 ## Local setup
 
@@ -97,12 +97,12 @@ This is a hackathon demo, not a production lending deployment. The collection is
 
 ## Realyse market signal
 
-The card-value step fetches the public [Realyse card API](https://realyse.io/docs) through `GET /api/market-signal` when that step opens and every five minutes while it remains open. It pins the 1999 Base Set Charizard PSA 9 record, validates the card identity and a matching sale, and displays the reported reference price, evidence count, price status, and Realyse timestamp. If the source is unavailable or identity checks fail, the panel shows no price. The public API requires no key for this demo.
+The read-only `GET /api/market-signal` route fetches the public [Realyse card API](https://realyse.io/docs). It pins the 1999 Base Set Charizard PSA 9 record, validates the card identity and a matching sale, and returns the reported reference price, evidence count, price status, and Realyse timestamp. If the source is unavailable or identity checks fail, the route returns no price. The public API requires no key for this demo. This integration is kept out of the consumer borrowing flow because the available market record is too thin to set a loan amount.
 
 This is **read-only market context**. The signed loan valuation still comes from the SQLite demo fixture. The currently matched Realyse record is indicative and based on one reported sale. A different Realyse SKU labeled Base Set Charizard includes 2021 Celebrations sales; using that aggregate for collateral would misprice the demo card. Before market data can determine real loans, add verified asset and sale matching, freshness and sample-size gates, licensed data rights, an explicit haircut policy, and operator review.
 
 ## Guided borrower flow
 
-`/borrow` lets anyone preview the single minted sample card, request a `GET /api/demo-price?cardId=demo-charizard-001` test estimate, and review fixed Sepolia loan terms before connecting a wallet. The endpoint returns a **mock Realyse-style** response containing the $10,000 assumed value from SQLite, its original recorded timestamp, and a freshness flag. It does not call Realyse or invent sales evidence. The real public Realyse data appears as a separate market reference beside the test estimate when a verified matching record is available.
+`/borrow` lets anyone preview the single minted sample card, request a `GET /api/demo-price?cardId=demo-charizard-001` test estimate, and review fixed Sepolia loan terms before connecting a wallet. The endpoint returns a **mock Realyse-style** response containing the $10,000 assumed value from SQLite, its original recorded timestamp, and a freshness flag. It does not call Realyse or invent sales evidence. The separate public Realyse data remains available from `/api/market-signal` for technical inspection.
 
 The NFT owner may request a signed quote before World ID verification so they can inspect its terms. Origination still requires World eligibility and onchain checks. The valuation signer keeps its existing 24-hour fixture freshness rule; fetching the mock price does not update that timestamp. If the assumption is stale, the page says why a signed quote cannot be issued.

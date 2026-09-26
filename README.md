@@ -46,6 +46,8 @@ pnpm card:mint-demo
 pnpm card:mint-portfolio
 ```
 
+The public landing page is at `/`. The Borrow page shows the card picker only after wallet connection. It reads Sepolia ownership for the five catalog NFTs and includes a card escrowed for an active loan when the connected wallet is the borrower. Other wallets see an empty collection; minting additional cards is currently an operator demo workflow.
+
 The mint scripts record public checkpoints in `deployments/`, link the NFTs to SQLite cards, and refresh the demo valuation fixtures. Their metadata explicitly describes simulated custody. If a demo card is liquidated, rerunning its mint script creates a new fictional certificate; the liquidated token remains ineligible for another loan. `pnpm pool:seed-demo` targets 11,000 valueless MockUSDC, enough for all five maximum demo loans together. A fresh deployment may need a second faucet claim after the one-day cooldown to reach that target; the script deposits the available amount meanwhile. On the testnet deployment, the borrower or protocol admin can click **Advance demo loan to default** after origination. This charges full 90-day interest and makes the loan immediately default-eligible, allowing the three-minute auction to fit into a live walkthrough. The control is disabled when `LoanManager` is constructed with `demoMode=false`.
 
 ## ENSv2 identity and delegation on Sepolia

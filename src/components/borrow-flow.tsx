@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
-import { useAccount, useReadContract, useSwitchChain } from "wagmi";
+import { useQuery } from "@tanstack/react-query";
+import { useAccount, usePublicClient, useReadContract, useSwitchChain } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BorrowActions } from "@/components/borrow-actions";
@@ -11,15 +12,56 @@ import { abis, contracts, SEPOLIA_CHAIN_ID } from "@/lib/contracts";
 import { cardCustodyStatus } from "@/lib/card-custody";
 import type { DemoPrice } from "@/lib/demo-price";
 import { formatUsdc, GRACE_DAYS, maximumPrincipal, simpleInterest, TERM_DAYS } from "@/lib/loan-math";
+import { cardBelongsToWallet } from "@/lib/wallet-cards";
 
 type Asset = { id: string; name: string; setName: string; printing: string; year: number; grader: string; grade: string; certificationNumber: string; psaReferenceNumber: string; tokenId: string | null; imageUrl: string; saleObservedAt: string; saleSourceUrl: string; valueMicroUsdc: number };
 type WorldConfig = { appId: string; rpId: string; environment: "production" | "staging" } | null;
 const maximumDemoPrincipal = 3_500_000_000n;
 
 export function BorrowFlow({ assets, worldConfig }: { assets: Asset[]; worldConfig: WorldConfig }) {
+  const { address, isConnected, status } = useAccount();
+  const publicClient = usePublicClient({ chainId: SEPOLIA_CHAIN_ID });
+  const inventory = useQuery({
+    queryKey: ["wallet-cards", address?.toLowerCase(), assets.map((asset) => `${asset.id}:${asset.tokenId}`).join("|")],
+    enabled: isConnected && Boolean(address && publicClient && contracts.card && contracts.manager),
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const cardAddress = contracts.card;
+      const managerAddress = contracts.manager;
+      if (!address || !publicClient || !cardAddress || !managerAddress) throw new Error("Card service unavailable.");
+      const matches = await Promise.all(assets.map(async (asset) => {
+        if (!asset.tokenId) return null;
+        const tokenId = BigInt(asset.tokenId);
+        const [owner, loanId] = await Promise.all([
+          publicClient.readContract({ address: cardAddress, abi: abis.card, functionName: "ownerOf", args: [tokenId] }),
+          publicClient.readContract({ address: managerAddress, abi: abis.manager, functionName: "activeLoanForToken", args: [tokenId] }),
+        ]);
+        const loan = typeof loanId === "bigint" && loanId > 0n
+          ? await publicClient.readContract({ address: managerAddress, abi: abis.manager, functionName: "loans", args: [loanId] })
+          : null;
+        return cardBelongsToWallet(address, owner, loan) ? asset.id : null;
+      }));
+      return matches.filter((id): id is string => Boolean(id));
+    },
+  });
+
+  if (status === "reconnecting" || (isConnected && !address)) return <div className="mx-auto max-w-xl py-20 text-center"><h1 className="font-display text-4xl font-semibold">Your cards</h1><p className="mt-3 text-muted-foreground">Finding your wallet…</p></div>;
+  if (!isConnected) return <div className="mx-auto max-w-xl py-16 text-center md:py-24"><div className="font-serial mx-auto mb-8 flex size-14 items-center justify-center border border-primary text-2xl font-semibold text-primary" aria-hidden="true">C</div><h1 className="font-display text-4xl font-semibold leading-tight md:text-5xl">Your cards live here.</h1><p className="mx-auto mt-4 max-w-md text-base leading-7 text-muted-foreground">Connect your wallet to see the cards you own and any cards backing your active loans.</p><div className="mt-8 flex justify-center"><WalletButton /></div></div>;
+  if (!contracts.card || !contracts.manager || !publicClient) return <div className="py-16 text-center"><h1 className="font-display text-4xl font-semibold">Your cards</h1><p role="alert" className="mt-4 text-muted-foreground">The card service is temporarily unavailable.</p></div>;
+  if (inventory.isPending) return <div className="py-16 text-center" aria-busy="true"><h1 className="font-display text-4xl font-semibold">Your cards</h1><p className="mt-4 text-muted-foreground">Checking cards on Sepolia…</p></div>;
+  if (inventory.isError) return <div className="py-16 text-center"><h1 className="font-display text-4xl font-semibold">Your cards</h1><p role="alert" className="mt-4 text-muted-foreground">Could not check your cards on Sepolia.</p><Button type="button" variant="outline" className="mt-6" onClick={() => void inventory.refetch()}>Try again</Button></div>;
+
+  const walletAssets = assets.filter((asset) => inventory.data.includes(asset.id));
+  if (walletAssets.length === 0) return <div className="mx-auto max-w-xl py-16 text-center md:py-24"><h1 className="font-display text-4xl font-semibold">No cards in this wallet.</h1><p className="mt-4 text-muted-foreground">We could not find a supported vaulted card owned by this wallet or backing one of its active loans.</p></div>;
+
+  return <BorrowCollection key={address.toLowerCase()} assets={walletAssets} worldConfig={worldConfig} />;
+}
+
+function BorrowCollection({ assets, worldConfig }: { assets: Asset[]; worldConfig: WorldConfig }) {
   const [selectedId, setSelectedId] = useState(assets[0]?.id);
   const selected = assets.find((asset) => asset.id === selectedId) ?? assets[0];
   return <div className="space-y-6">
+    <h1 className="font-display text-4xl font-semibold leading-tight md:text-5xl">Pick your card.</h1>
     <div className="flex items-end justify-between gap-4 border-b pb-3"><h2 className="font-display text-2xl font-semibold">The collection</h2><span className="font-serial text-xs text-muted-foreground">{assets.length} CARDS</span></div>
     <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 md:mx-0 md:px-0">{assets.map((asset) => <button key={asset.id} type="button" aria-pressed={selected?.id === asset.id} aria-label={`Select ${asset.name}, PSA ${asset.grade}, comparable PSA reference ${asset.psaReferenceNumber}, sale ${formatUsdc(asset.valueMicroUsdc)}`} onClick={() => setSelectedId(asset.id)} className={`collection-slot group w-40 shrink-0 snap-start rounded-md border p-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-44 lg:min-w-0 lg:grow ${selected?.id === asset.id ? "border-primary bg-accent" : "border-border bg-card hover:border-primary"}`}>
       <span className="relative flex h-36 items-center justify-center bg-secondary p-2"><img src={asset.imageUrl} alt="" className="collection-art h-full w-auto max-w-full object-contain drop-shadow-sm" /><span className="font-serial absolute right-2 top-2 border border-border bg-card px-1.5 py-1 text-xs font-semibold text-foreground">PSA {asset.grade}</span></span>

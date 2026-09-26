@@ -14,7 +14,7 @@
     "db:studio": "drizzle-kit studio",
     "contracts:compile": "hardhat compile",
     "contracts:test": "hardhat test solidity",
-    "test:unit": "node --import tsx --test src/lib/loan-math.test.ts src/lib/realyse.test.ts src/lib/demo-price.test.ts src/lib/world.test.ts",
+    "test:unit": "node --import tsx --test src/lib/loan-math.test.ts src/lib/realyse.test.ts src/lib/demo-price.test.ts src/lib/world.test.ts src/lib/wallet-cards.test.ts",
     "deploy:check": "node --import tsx scripts/deploy-sepolia.ts --check",
     "deploy:sepolia": "node --import tsx scripts/deploy-sepolia.ts --deploy",
     "card:mint-demo": "node --import tsx scripts/mint-demo-card.ts",

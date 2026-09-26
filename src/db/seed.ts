@@ -22,18 +22,24 @@ for (const card of DEMO_CARDS) {
     custodyStatus: "simulated_received",
     tokenId: null,
     tokenContract: null,
-    imageUrl: null,
-  }).onConflictDoNothing();
+    imageUrl: card.imageUrl,
+  }).onConflictDoUpdate({ target: cards.id, set: { imageUrl: card.imageUrl } });
 
   await db.insert(valuationFixtures).values({
     cardId: card.id,
     lastSaleMicroUsdc: card.valueMicroUsdc,
-    median30dMicroUsdc: card.valueMicroUsdc,
+    median30dMicroUsdc: 0,
     appraisedMicroUsdc: card.valueMicroUsdc,
-    confidence: "medium",
+    confidence: "low",
     updatedAt: new Date(),
-  }).onConflictDoNothing();
+  }).onConflictDoUpdate({ target: valuationFixtures.cardId, set: {
+    lastSaleMicroUsdc: card.valueMicroUsdc,
+    median30dMicroUsdc: 0,
+    appraisedMicroUsdc: card.valueMicroUsdc,
+    confidence: "low",
+    updatedAt: new Date(),
+  } });
 }
 
 await client.close();
-console.log("Seeded the simulated card portfolio and valuation fixtures.");
+console.log("Seeded the simulated cards and grade-matched last-auction-sale snapshots.");

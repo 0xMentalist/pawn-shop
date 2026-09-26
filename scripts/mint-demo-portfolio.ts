@@ -68,17 +68,21 @@ async function nextCertification(current: string) {
 
 async function mintCard(record: typeof cards.$inferSelect, certificationNumber: string): Promise<MintRecord> {
   const attestation = keccak256(toBytes(`simulated-demo-custody:${certificationNumber}`));
+  const evidence = DEMO_CARDS.find((card) => card.id === record.id);
+  if (!evidence) throw new Error(`Missing artwork for ${record.id}`);
   const metadata = {
     name: `${record.year} ${record.name} · ${record.setName} · ${record.grader} ${record.grade}`,
-    description: "Collector Credit demo card. The custody receipt and valuation are simulated; no physical card is represented as held.",
+    description: "Collector Credit demo card. The custody receipt and valuation are simulated; no physical card is represented as held. Artwork illustrates the card printing only.",
+    image: evidence.imageUrl,
     attributes: [
+      { trait_type: "Printing", value: evidence.printing },
       { trait_type: "Grader", value: record.grader },
       { trait_type: "Grade", value: record.grade },
       { trait_type: "Certification", value: certificationNumber },
     ],
   };
   const metadataUri = `data:application/json;base64,${Buffer.from(JSON.stringify(metadata)).toString("base64")}`;
-  const txHash = await walletClient.writeContract({ address: cardAddress, abi: cardAbi, functionName: "mint", args: [demoBorrower, record.name, record.setName, record.year, record.grader, record.grade, certificationNumber, "", metadataUri, attestation] });
+  const txHash = await walletClient.writeContract({ address: cardAddress, abi: cardAbi, functionName: "mint", args: [demoBorrower, record.name, record.setName, record.year, record.grader, record.grade, certificationNumber, evidence.imageUrl, metadataUri, attestation] });
   const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
   if (receipt.status !== "success") throw new Error(`Mint failed: ${txHash}`);
   const mintEvent = receipt.logs.filter((log) => log.address.toLowerCase() === cardAddress.toLowerCase()).map((log) => {

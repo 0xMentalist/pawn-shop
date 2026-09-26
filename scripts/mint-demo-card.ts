@@ -7,6 +7,7 @@ import { drizzle } from "drizzle-orm/libsql";
 import { eq } from "drizzle-orm";
 import { cards, valuationFixtures } from "../src/db/schema";
 import { cardCertificationNumber, cardCustodyStatus } from "../src/lib/card-custody";
+import { getDemoCardEvidence } from "../src/lib/demo-cards";
 
 process.loadEnvFile(".env.local");
 const key = process.env.DEPLOYER_PRIVATE_KEY as Hex | undefined;
@@ -41,10 +42,14 @@ async function nextDemoCertification(current: string) {
 
 async function mintCard(certificationNumber: string): Promise<DemoCheckpoint> {
   const attestation = keccak256(toBytes(`simulated-demo-custody:${certificationNumber}`));
+  const evidence = getDemoCardEvidence(record.id);
+  if (!evidence) throw new Error(`Missing artwork for ${record.id}`);
   const metadata = {
     name: `${record.year} ${record.name} · ${record.setName} · ${record.grader} ${record.grade}`,
-    description: "Collector Credit demonstration card. Custody receipt is simulated; no physical card is represented as held.",
+    description: "Collector Credit demonstration card. Custody receipt is simulated; no physical card is represented as held. Artwork illustrates the card printing only.",
+    image: evidence.imageUrl,
     attributes: [
+      { trait_type: "Printing", value: evidence.printing },
       { trait_type: "Grader", value: record.grader },
       { trait_type: "Grade", value: record.grade },
       { trait_type: "Certification", value: certificationNumber },
@@ -55,7 +60,7 @@ async function mintCard(certificationNumber: string): Promise<DemoCheckpoint> {
     address: cardAddress,
     abi: compiled.abi,
     functionName: "mint",
-    args: [borrower, record.name, record.setName, record.year, record.grader, record.grade, certificationNumber, "", metadataUri, attestation],
+    args: [borrower, record.name, record.setName, record.year, record.grader, record.grade, certificationNumber, evidence.imageUrl, metadataUri, attestation],
   });
   const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
   if (receipt.status !== "success") throw new Error(`Mint failed: ${txHash}`);

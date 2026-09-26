@@ -1,29 +1,30 @@
-import { isDemoCardId } from "./demo-cards";
+import { getDemoCardEvidence } from "./demo-cards";
 
-/** A Realyse-shaped demo response backed by the project's stated price assumption. */
 export type DemoPrice = {
   cardId: string;
-  assumedValueMicroUsdc: number;
-  assumptionRecordedAt: string;
+  lastSaleMicroUsdc: number;
+  saleObservedAt: string;
+  saleSourceUrl: string;
   fetchedAt: string;
   freshForSignedQuote: boolean;
-  source: "mock-realyse";
-  basis: "fixed demo assumption";
+  source: "psa-auction-comparable";
 };
 
-const MAX_ASSUMPTION_AGE_MS = 24 * 60 * 60 * 1000;
+export const MAX_SALE_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
-export function createDemoPrice(cardId: string, assumedValueMicroUsdc: number, recordedAt: Date, now = new Date()): DemoPrice {
-  if (!isDemoCardId(cardId) || !Number.isSafeInteger(assumedValueMicroUsdc) || assumedValueMicroUsdc <= 0 || !Number.isFinite(recordedAt.getTime())) {
-    throw new Error("Demo price is unavailable for this asset.");
+export function createDemoPrice(cardId: string, storedValueMicroUsdc: number, now = new Date()): DemoPrice {
+  const evidence = getDemoCardEvidence(cardId);
+  if (!evidence || storedValueMicroUsdc !== evidence.valueMicroUsdc || !Number.isFinite(now.getTime())) {
+    throw new Error("A matched last-sale estimate is unavailable for this card.");
   }
+  const saleAge = now.getTime() - Date.parse(evidence.saleObservedAt);
   return {
     cardId,
-    assumedValueMicroUsdc,
-    assumptionRecordedAt: recordedAt.toISOString(),
+    lastSaleMicroUsdc: evidence.valueMicroUsdc,
+    saleObservedAt: evidence.saleObservedAt,
+    saleSourceUrl: evidence.saleSourceUrl,
     fetchedAt: now.toISOString(),
-    freshForSignedQuote: now.getTime() >= recordedAt.getTime() && now.getTime() - recordedAt.getTime() <= MAX_ASSUMPTION_AGE_MS,
-    source: "mock-realyse",
-    basis: "fixed demo assumption",
+    freshForSignedQuote: saleAge >= 0 && saleAge <= MAX_SALE_AGE_MS,
+    source: "psa-auction-comparable",
   };
 }

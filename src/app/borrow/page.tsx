@@ -3,6 +3,7 @@ import { BorrowFlow } from "@/components/borrow-flow";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeading } from "@/components/page-heading";
 import { getDemoCards } from "@/lib/data";
+import { getDemoCardEvidence } from "@/lib/demo-cards";
 
 export const metadata: Metadata = { title: "Borrow" };
 export const dynamic = "force-dynamic";
@@ -14,6 +15,10 @@ export default async function BorrowPage() {
     : null;
   return <main className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8 md:px-6 md:py-12">
     <PageHeading title="Borrow against your card" />
-    {records.length === 0 ? <Card><CardHeader><CardTitle>No cards available</CardTitle><CardDescription>Try again later.</CardDescription></CardHeader></Card> : <BorrowFlow assets={records.map(({ card, valuation }) => ({ id: card.id, name: card.name, setName: card.setName, year: card.year, grader: card.grader, grade: card.grade, certificationNumber: card.certificationNumber, tokenId: card.tokenId, valueMicroUsdc: valuation.appraisedMicroUsdc }))} worldConfig={worldConfig} />}
+    {records.length === 0 ? <Card><CardHeader><CardTitle>No cards available</CardTitle><CardDescription>Try again later.</CardDescription></CardHeader></Card> : <BorrowFlow assets={records.map(({ card, valuation }) => {
+      const evidence = getDemoCardEvidence(card.id);
+      if (!evidence) throw new Error(`Missing card evidence for ${card.id}`);
+      return { id: card.id, name: card.name, setName: card.setName, printing: evidence.printing, year: card.year, grader: card.grader, grade: card.grade, certificationNumber: card.certificationNumber, tokenId: card.tokenId, imageUrl: evidence.imageUrl, saleObservedAt: evidence.saleObservedAt, saleSourceUrl: evidence.saleSourceUrl, valueMicroUsdc: valuation.appraisedMicroUsdc };
+    })} worldConfig={worldConfig} />}
   </main>;
 }

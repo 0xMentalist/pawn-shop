@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, Flame, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, ExternalLink, RefreshCw } from "lucide-react";
 import { useAccount, useReadContract, useSwitchChain } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { cardCustodyStatus } from "@/lib/card-custody";
 import type { DemoPrice } from "@/lib/demo-price";
 import { formatUsdc, GRACE_DAYS, maximumPrincipal, simpleInterest, TERM_DAYS } from "@/lib/loan-math";
 
-type Asset = { id: string; name: string; setName: string; year: number; grader: string; grade: string; certificationNumber: string; tokenId: string | null; valueMicroUsdc: number };
+type Asset = { id: string; name: string; setName: string; printing: string; year: number; grader: string; grade: string; certificationNumber: string; tokenId: string | null; imageUrl: string; saleObservedAt: string; saleSourceUrl: string; valueMicroUsdc: number };
 type WorldConfig = { appId: string; rpId: string; environment: "production" | "staging" } | null;
 const maximumDemoPrincipal = 3_500_000_000n;
 
@@ -20,10 +20,11 @@ export function BorrowFlow({ assets, worldConfig }: { assets: Asset[]; worldConf
   const [selectedId, setSelectedId] = useState(assets.find((asset) => asset.id === "demo-charizard-001")?.id ?? assets[0]?.id);
   const selected = assets.find((asset) => asset.id === selectedId) ?? assets[0];
   return <div className="space-y-8">
-    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">{assets.map((asset) => <button key={asset.id} type="button" aria-current={selected?.id === asset.id ? "true" : undefined} onClick={() => setSelectedId(asset.id)} className={`min-h-32 rounded-lg border p-3 text-left transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4 ${selected?.id === asset.id ? "border-foreground bg-secondary" : "border-border bg-card"}`}>
-      <span className="block text-sm font-semibold sm:text-base">{asset.year} {asset.name}</span>
-      <span className="mt-1 block text-xs text-muted-foreground">{asset.setName} · {asset.grader} {asset.grade}</span>
-      <span className="mt-4 block text-base font-semibold tabular-nums sm:text-xl">{formatUsdc(asset.valueMicroUsdc)}</span>
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">{assets.map((asset) => <button key={asset.id} type="button" aria-current={selected?.id === asset.id ? "true" : undefined} onClick={() => setSelectedId(asset.id)} className={`group overflow-hidden rounded-xl border text-left transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected?.id === asset.id ? "border-foreground bg-secondary" : "border-border bg-card"}`}>
+      <span className="flex h-36 items-center justify-center bg-secondary/60 p-3 sm:h-44"><img src={asset.imageUrl} alt={`${asset.name} ${asset.printing} card artwork`} className="h-full w-auto max-w-full object-contain drop-shadow-md transition-transform duration-200 group-hover:scale-[1.03]" /></span>
+      <span className="block space-y-1 px-3 py-3 sm:px-4"><span className="block text-sm font-semibold sm:text-base">{asset.year} {asset.name}</span>
+      <span className="block text-xs text-muted-foreground">{asset.setName} · {asset.grader} {asset.grade}</span>
+      <span className="block pt-1 text-lg font-semibold tabular-nums sm:text-xl">{formatUsdc(asset.valueMicroUsdc)}</span></span>
     </button>)}</div>
     {selected ? <BorrowDetail key={selected.id} asset={selected} worldConfig={worldConfig} /> : null}
   </div>;
@@ -46,7 +47,7 @@ function BorrowDetail({ asset, worldConfig }: { asset: Asset; worldConfig: World
   const isBorrower = Boolean(address && Array.isArray(activeLoan.data) && typeof activeLoan.data[0] === "string" && activeLoan.data[0].toLowerCase() === address.toLowerCase());
   const custodyStatus = cardCustodyStatus(custody.data);
   const canBorrowAgainstCard = custodyStatus === 1 || custodyStatus === 3;
-  const value = price ? BigInt(price.assumedValueMicroUsdc) : null;
+  const value = price ? BigInt(price.lastSaleMicroUsdc) : null;
   const ltvPrincipal = value === null ? null : maximumPrincipal(value);
   const principal = ltvPrincipal === null ? null : ltvPrincipal > maximumDemoPrincipal ? maximumDemoPrincipal : ltvPrincipal;
   const interest = principal === null ? null : simpleInterest(principal, TERM_DAYS * 24n * 60n * 60n);
@@ -65,7 +66,7 @@ function BorrowDetail({ asset, worldConfig }: { asset: Asset; worldConfig: World
       const response = await fetch(`/api/demo-price?cardId=${encodeURIComponent(asset.id)}`, { cache: "no-store" });
       const body = await response.json() as DemoPrice & { error?: string };
       if (!response.ok) throw new Error(body.error ?? "Could not get an estimate.");
-      if (body.cardId !== asset.id || body.source !== "mock-realyse" || !Number.isSafeInteger(body.assumedValueMicroUsdc) || body.assumedValueMicroUsdc <= 0) throw new Error("The estimate did not match this card.");
+      if (body.cardId !== asset.id || body.source !== "psa-auction-comparable" || !Number.isSafeInteger(body.lastSaleMicroUsdc) || body.lastSaleMicroUsdc !== asset.valueMicroUsdc || body.saleSourceUrl !== asset.saleSourceUrl) throw new Error("The estimate did not match this card.");
       setPrice(body);
     } catch (error) {
       setPrice(null);
@@ -77,12 +78,12 @@ function BorrowDetail({ asset, worldConfig }: { asset: Asset; worldConfig: World
     {view === "card" ? <Card>
       <CardHeader className="border-b border-border">
         <CardTitle className="text-2xl">{asset.year} {asset.name}</CardTitle>
-        <p className="text-sm text-muted-foreground">{asset.setName} · {asset.grader} {asset.grade}</p>
+        <p className="text-sm text-muted-foreground">{asset.setName} · {asset.printing} · {asset.grader} {asset.grade}</p>
       </CardHeader>
       <CardContent className="space-y-6 pt-6">
-        <div className="flex items-center gap-4">
-          <div className="flex size-20 shrink-0 items-center justify-center rounded-md bg-secondary"><Flame className="size-9 text-foreground" aria-hidden="true" /></div>
-          <p className="min-w-0 break-all text-sm text-muted-foreground">Certificate {asset.certificationNumber}</p>
+        <div className="space-y-3">
+          <div className="flex min-h-72 items-center justify-center rounded-lg bg-secondary/60 p-6"><img src={asset.imageUrl} alt={`${asset.name} ${asset.printing} card artwork`} className="max-h-80 w-auto max-w-full object-contain drop-shadow-lg" /></div>
+          <p className="text-xs text-muted-foreground">Reference artwork · Demo certificate {asset.certificationNumber}</p>
         </div>
         {hasLoan && isBorrower ? <Button type="button" className="w-full" onClick={() => setView("offer")}>Manage your loan<ArrowRight className="size-4" aria-hidden="true" /></Button> : null}
         {custodyStatus === 4 ? <p role="status" className="text-sm text-destructive">This card was liquidated and cannot back another loan.</p> : null}
@@ -90,14 +91,13 @@ function BorrowDetail({ asset, worldConfig }: { asset: Asset; worldConfig: World
         <div className="border-t border-border pt-6">
           <p className="text-sm text-muted-foreground">Estimated card value</p>
           {priceBusy ? <div aria-busy="true" className="mt-3 space-y-3"><div className="h-10 w-44 animate-pulse rounded bg-muted" /><div className="h-4 w-32 animate-pulse rounded bg-muted" /></div>
-            : price ? <><p className="mt-1 text-4xl font-semibold tracking-tight tabular-nums">{formatUsdc(price.assumedValueMicroUsdc)}</p><p className="mt-1 text-sm text-muted-foreground">Test estimate · {new Date(price.assumptionRecordedAt).toLocaleDateString()}</p></>
-            : <p className="mt-1 text-4xl font-semibold tracking-tight" aria-label="Estimate not available">—</p>}
+            : <><p className="mt-1 text-4xl font-semibold tracking-tight tabular-nums">{formatUsdc(price?.lastSaleMicroUsdc ?? asset.valueMicroUsdc)}</p><p className="mt-1 text-sm text-muted-foreground">Last recorded auction sale · {new Date(price?.saleObservedAt ?? asset.saleObservedAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })}</p><a className="mt-2 inline-flex items-center gap-1 text-sm underline underline-offset-4 hover:text-foreground" href={asset.saleSourceUrl} target="_blank" rel="noopener noreferrer">View sale record <ExternalLink className="size-3" aria-hidden="true" /></a></>}
         </div>
-        {price && !price.freshForSignedQuote ? <p role="status" className="text-sm text-warning-foreground">This estimate has expired. A new appraisal is needed before borrowing.</p> : null}
+        {price && !price.freshForSignedQuote ? <p role="status" className="text-sm text-warning-foreground">This sale record is too old for a loan quote.</p> : null}
         {priceError ? <p role="alert" className="text-sm text-destructive">{priceError} Please try again.</p> : null}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button type="button" variant={price ? "outline" : "default"} onClick={() => void fetchDemoPrice()} disabled={priceBusy} aria-busy={priceBusy}><RefreshCw className="size-4" aria-hidden="true" />{priceBusy ? "Getting estimate…" : price ? "Refresh estimate" : "Get estimate"}</Button>
-          {price && !hasLoan ? <Button type="button" onClick={() => setView("offer")} disabled={!canBorrowAgainstCard}>Review offer<ArrowRight className="size-4" aria-hidden="true" /></Button> : null}
+          {price && !hasLoan ? <Button type="button" onClick={() => setView("offer")} disabled={!canBorrowAgainstCard || !price.freshForSignedQuote}>Review offer<ArrowRight className="size-4" aria-hidden="true" /></Button> : null}
         </div>
       </CardContent>
     </Card> : <Card>
@@ -107,16 +107,16 @@ function BorrowDetail({ asset, worldConfig }: { asset: Asset; worldConfig: World
         {!hasLoan && price && principal !== null && interest !== null ? <>
           <div><p className="text-sm text-muted-foreground">You could borrow</p><p className="mt-1 text-5xl font-semibold tracking-tight tabular-nums">{formatUsdc(principal)}</p><p className="mt-2 text-sm text-muted-foreground">MockUSDC on Sepolia · test funds</p></div>
           <dl className="divide-y divide-border border-y border-border text-sm">
-            <div className="flex justify-between gap-4 py-3"><dt className="text-muted-foreground">Card value</dt><dd className="font-medium tabular-nums">{formatUsdc(price.assumedValueMicroUsdc)}</dd></div>
+            <div className="flex justify-between gap-4 py-3"><dt className="text-muted-foreground">Last auction sale</dt><dd className="font-medium tabular-nums">{formatUsdc(price.lastSaleMicroUsdc)}</dd></div>
             <div className="flex justify-between gap-4 py-3"><dt className="text-muted-foreground">Loan to value</dt><dd className="font-medium">35%, capped at $3,500</dd></div>
             <div className="flex justify-between gap-4 py-3"><dt className="text-muted-foreground">Fixed APR</dt><dd className="font-medium">20%</dd></div>
             <div className="flex justify-between gap-4 py-3"><dt className="text-muted-foreground">Term and grace</dt><dd className="font-medium">{TERM_DAYS.toString()} + {GRACE_DAYS.toString()} days</dd></div>
             <div className="flex justify-between gap-4 py-3"><dt className="text-muted-foreground">Interest at maturity</dt><dd className="font-medium tabular-nums">{formatUsdc(interest)}</dd></div>
             <div className="flex justify-between gap-4 py-3"><dt className="font-semibold">Total at maturity</dt><dd className="font-semibold tabular-nums">{formatUsdc(principal + interest)}</dd></div>
           </dl>
-          {!price.freshForSignedQuote ? <p role="status" className="text-sm text-warning-foreground">This estimate has expired. A new appraisal is needed before borrowing.</p> : null}
+          {!price.freshForSignedQuote ? <p role="status" className="text-sm text-warning-foreground">This sale record is too old for a loan quote.</p> : null}
         </> : null}
-        {(!hasLoan || isBorrower) ? onSepolia ? <BorrowActions key={address} cardId={asset.id} tokenId={asset.tokenId} custodyStatus={custodyStatus} expectedValueMicroUsdc={price?.assumedValueMicroUsdc} worldConfig={worldConfig} /> : <div className="space-y-3"><WalletButton />{isConnected ? <Button type="button" variant="outline" onClick={() => void switchToSepolia()} disabled={switchingNetwork}>{switchingNetwork ? "Switching…" : "Switch to Sepolia"}</Button> : null}{networkError ? <p role="alert" className="text-sm text-destructive">{networkError}</p> : null}</div> : null}
+        {(!hasLoan || isBorrower) ? onSepolia ? <BorrowActions key={address} cardId={asset.id} tokenId={asset.tokenId} custodyStatus={custodyStatus} expectedValueMicroUsdc={price?.lastSaleMicroUsdc} worldConfig={worldConfig} /> : <div className="space-y-3"><WalletButton />{isConnected ? <Button type="button" variant="outline" onClick={() => void switchToSepolia()} disabled={switchingNetwork}>{switchingNetwork ? "Switching…" : "Switch to Sepolia"}</Button> : null}{networkError ? <p role="alert" className="text-sm text-destructive">{networkError}</p> : null}</div> : null}
         <Button type="button" variant="ghost" onClick={() => setView("card")}><ArrowLeft className="size-4" aria-hidden="true" />Back to card</Button>
       </CardContent>
     </Card>}

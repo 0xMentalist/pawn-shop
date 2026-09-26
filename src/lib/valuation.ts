@@ -4,10 +4,10 @@ import { randomBytes } from "node:crypto";
 import { isAddress, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { getDemoCard } from "@/lib/data";
+import { createDemoPrice } from "@/lib/demo-price";
 
 const CHAIN_ID = 11155111;
 const QUOTE_SECONDS = 10 * 60;
-const MAX_VALUATION_AGE_MS = 24 * 60 * 60 * 1000;
 
 export class ValuationError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -17,7 +17,11 @@ export async function issueSignedValuation(cardId: string) {
   const record = await getDemoCard(cardId);
   if (!record || !record.valuation) throw new ValuationError(404, "Card or valuation fixture not found.");
   if (!record.card.tokenId || !record.card.tokenContract) throw new ValuationError(409, "The demo card must be minted on Sepolia before a signed valuation is available.");
-  if (Date.now() - record.valuation.updatedAt.getTime() > MAX_VALUATION_AGE_MS) throw new ValuationError(410, "The comparable-sales fixture is stale. Update it before quoting.");
+  let sale;
+  try { sale = createDemoPrice(cardId, record.valuation.appraisedMicroUsdc); }
+  catch { throw new ValuationError(409, "The last-sale estimate needs to be synchronized before quoting."); }
+  if (record.valuation.lastSaleMicroUsdc !== sale.lastSaleMicroUsdc) throw new ValuationError(409, "The stored last sale does not match this card's quote.");
+  if (!sale.freshForSignedQuote) throw new ValuationError(410, "The last recorded sale is too old for a loan quote.");
 
   const currency = process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS;
   const verifier = process.env.NEXT_PUBLIC_VALUATION_VERIFIER_ADDRESS;
@@ -66,10 +70,12 @@ export async function issueSignedValuation(cardId: string) {
     signature,
     evidence: {
       lastSaleMicroUsdc: record.valuation.lastSaleMicroUsdc,
-      median30dMicroUsdc: record.valuation.median30dMicroUsdc,
+      median30dMicroUsdc: null,
       confidence: record.valuation.confidence,
       fixtureUpdatedAt: record.valuation.updatedAt.toISOString(),
-      source: "demo comparable-sales fixture",
+      saleObservedAt: sale.saleObservedAt,
+      saleSourceUrl: sale.saleSourceUrl,
+      source: "PSA recorded auction comparable",
     },
   };
 }

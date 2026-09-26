@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BorrowActions } from "@/components/borrow-actions";
 import { WalletButton } from "@/components/wallet-button";
 import { abis, contracts, SEPOLIA_CHAIN_ID } from "@/lib/contracts";
+import { cardCustodyStatus } from "@/lib/card-custody";
 import type { DemoPrice } from "@/lib/demo-price";
 import { formatUsdc, GRACE_DAYS, maximumPrincipal, simpleInterest, TERM_DAYS } from "@/lib/loan-math";
 
@@ -25,10 +26,13 @@ export function BorrowFlow({ asset, worldConfig }: { asset: Asset; worldConfig: 
   const { switchChainAsync, isPending: switchingNetwork } = useSwitchChain();
   const onSepolia = isConnected && chainId === SEPOLIA_CHAIN_ID;
   const tokenId = asset.tokenId ? BigInt(asset.tokenId) : 0n;
-  const owner = useReadContract({ address: contracts.card, abi: abis.card, functionName: "ownerOf", args: [tokenId], chainId: SEPOLIA_CHAIN_ID, query: { enabled: onSepolia && Boolean(asset.tokenId && contracts.card) } });
+  const custody = useReadContract({ address: contracts.card, abi: abis.card, functionName: "cardDetails", args: [tokenId], chainId: SEPOLIA_CHAIN_ID, query: { enabled: Boolean(asset.tokenId && contracts.card), refetchInterval: 15_000 } });
   const loanId = useReadContract({ address: contracts.manager, abi: abis.manager, functionName: "activeLoanForToken", args: [tokenId], chainId: SEPOLIA_CHAIN_ID, query: { enabled: onSepolia && Boolean(asset.tokenId && contracts.manager), refetchInterval: 15_000 } });
   const hasLoan = typeof loanId.data === "bigint" && loanId.data > 0n;
-  const ownsCard = Boolean(address && typeof owner.data === "string" && owner.data.toLowerCase() === address.toLowerCase());
+  const activeLoan = useReadContract({ address: contracts.manager, abi: abis.manager, functionName: "loans", args: [typeof loanId.data === "bigint" ? loanId.data : 0n], chainId: SEPOLIA_CHAIN_ID, query: { enabled: onSepolia && hasLoan, refetchInterval: 15_000 } });
+  const isBorrower = Boolean(address && Array.isArray(activeLoan.data) && typeof activeLoan.data[0] === "string" && activeLoan.data[0].toLowerCase() === address.toLowerCase());
+  const custodyStatus = cardCustodyStatus(custody.data);
+  const canBorrowAgainstCard = custodyStatus === 1 || custodyStatus === 3;
   const value = price ? BigInt(price.assumedValueMicroUsdc) : null;
   const ltvPrincipal = value === null ? null : maximumPrincipal(value);
   const principal = ltvPrincipal === null ? null : ltvPrincipal > maximumDemoPrincipal ? maximumDemoPrincipal : ltvPrincipal;
@@ -67,7 +71,9 @@ export function BorrowFlow({ asset, worldConfig }: { asset: Asset; worldConfig: 
           <div className="flex size-20 shrink-0 items-center justify-center rounded-md bg-secondary"><Flame className="size-9 text-foreground" aria-hidden="true" /></div>
           <p className="min-w-0 break-all text-sm text-muted-foreground">Certificate {asset.certificationNumber}</p>
         </div>
-        {hasLoan && ownsCard ? <Button type="button" className="w-full" onClick={() => setView("offer")}>Manage your loan<ArrowRight className="size-4" aria-hidden="true" /></Button> : null}
+        {hasLoan && isBorrower ? <Button type="button" className="w-full" onClick={() => setView("offer")}>Manage your loan<ArrowRight className="size-4" aria-hidden="true" /></Button> : null}
+        {custodyStatus === 4 ? <p role="status" className="text-sm text-destructive">This card was liquidated and cannot back another loan.</p> : null}
+        {custody.isError ? <p role="alert" className="text-sm text-destructive">Could not check this card’s custody status. Try again shortly.</p> : null}
         <div className="border-t border-border pt-6">
           <p className="text-sm text-muted-foreground">Estimated card value</p>
           {priceBusy ? <div aria-busy="true" className="mt-3 space-y-3"><div className="h-10 w-44 animate-pulse rounded bg-muted" /><div className="h-4 w-32 animate-pulse rounded bg-muted" /></div>
@@ -78,13 +84,13 @@ export function BorrowFlow({ asset, worldConfig }: { asset: Asset; worldConfig: 
         {priceError ? <p role="alert" className="text-sm text-destructive">{priceError} Please try again.</p> : null}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button type="button" variant={price ? "outline" : "default"} onClick={() => void fetchDemoPrice()} disabled={priceBusy} aria-busy={priceBusy}><RefreshCw className="size-4" aria-hidden="true" />{priceBusy ? "Getting estimate…" : price ? "Refresh estimate" : "Get estimate"}</Button>
-          {price ? <Button type="button" onClick={() => setView("offer")}>Review offer<ArrowRight className="size-4" aria-hidden="true" /></Button> : null}
+          {price && !hasLoan ? <Button type="button" onClick={() => setView("offer")} disabled={!canBorrowAgainstCard}>Review offer<ArrowRight className="size-4" aria-hidden="true" /></Button> : null}
         </div>
       </CardContent>
     </Card> : <Card>
-      <CardHeader className="border-b border-border"><CardTitle className="text-2xl">{hasLoan && ownsCard ? "Your loan" : "Loan offer"}</CardTitle></CardHeader>
+      <CardHeader className="border-b border-border"><CardTitle className="text-2xl">{hasLoan && isBorrower ? "Your loan" : "Loan offer"}</CardTitle></CardHeader>
       <CardContent className="space-y-6 pt-6">
-        {hasLoan && !ownsCard ? <p className="text-sm text-muted-foreground">This card is currently in a loan.</p> : null}
+        {hasLoan && !isBorrower ? <p className="text-sm text-muted-foreground">This card is currently in a loan.</p> : null}
         {!hasLoan && price && principal !== null && interest !== null ? <>
           <div><p className="text-sm text-muted-foreground">You could borrow</p><p className="mt-1 text-5xl font-semibold tracking-tight tabular-nums">{formatUsdc(principal)}</p><p className="mt-2 text-sm text-muted-foreground">MockUSDC on Sepolia · test funds</p></div>
           <dl className="divide-y divide-border border-y border-border text-sm">
@@ -97,7 +103,7 @@ export function BorrowFlow({ asset, worldConfig }: { asset: Asset; worldConfig: 
           </dl>
           {!price.freshForSignedQuote ? <p role="status" className="text-sm text-warning-foreground">This estimate has expired. A new appraisal is needed before borrowing.</p> : null}
         </> : null}
-        {(!hasLoan || ownsCard) ? onSepolia ? <BorrowActions key={address} cardId={asset.id} tokenId={asset.tokenId} expectedValueMicroUsdc={price?.assumedValueMicroUsdc} worldConfig={worldConfig} /> : <div className="space-y-3"><WalletButton />{isConnected ? <Button type="button" variant="outline" onClick={() => void switchToSepolia()} disabled={switchingNetwork}>{switchingNetwork ? "Switching…" : "Switch to Sepolia"}</Button> : null}{networkError ? <p role="alert" className="text-sm text-destructive">{networkError}</p> : null}</div> : null}
+        {(!hasLoan || isBorrower) ? onSepolia ? <BorrowActions key={address} cardId={asset.id} tokenId={asset.tokenId} custodyStatus={custodyStatus} expectedValueMicroUsdc={price?.assumedValueMicroUsdc} worldConfig={worldConfig} /> : <div className="space-y-3"><WalletButton />{isConnected ? <Button type="button" variant="outline" onClick={() => void switchToSepolia()} disabled={switchingNetwork}>{switchingNetwork ? "Switching…" : "Switch to Sepolia"}</Button> : null}{networkError ? <p role="alert" className="text-sm text-destructive">{networkError}</p> : null}</div> : null}
         <Button type="button" variant="ghost" onClick={() => setView("card")}><ArrowLeft className="size-4" aria-hidden="true" />Back to card</Button>
       </CardContent>
     </Card>}

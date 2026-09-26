@@ -39,6 +39,6 @@ export default function DocsPage() {
       <h2 className="text-xl font-semibold tracking-tight">World ID</h2>
       <p className="max-w-prose text-sm leading-7 text-muted-foreground">Choose Orb, NFC Passport, My Number Card, or Selfie Check when you accept a loan. Each method unlocks the same test offer. A connected wallet must own the card.</p>
     </section>
-    <p className="border-t border-border pt-6 text-sm leading-7 text-muted-foreground">Prawn Shop runs on Sepolia with valueless test funds and five simulated vaulted cards. Estimates use dated, grade-matched auction sales of comparable cards; the artwork is a reference image, not a photo of the demo asset. A liquidated card cannot back another loan.</p>
+    <p className="border-t border-border pt-6 text-sm leading-7 text-muted-foreground">Pawn Shop runs on Sepolia with valueless test funds and five simulated vaulted cards. Estimates use dated, grade-matched auction sales of comparable cards; the artwork is a reference image, not a photo of the demo asset. A liquidated card cannot back another loan.</p>
   </main>;
 }

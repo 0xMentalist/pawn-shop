@@ -9,7 +9,7 @@ import "./globals.css";
 const plex = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-plex", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "Prawn Shop", template: "%s · Prawn Shop" },
+  title: { default: "Pawn Shop", template: "%s · Pawn Shop" },
   description: "Keep your cards. Access their value. Borrow against vaulted graded cards or earn by lending to collectors.",
 };
 

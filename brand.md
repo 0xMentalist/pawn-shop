@@ -1,8 +1,8 @@
-# Prawn Shop — brand direction
+# Pawn Shop — brand direction
 
-A clean, minimal interface with a small, playful prawn mark. The name makes the pawn shop idea familiar to collectors; the product copy stays direct and trustworthy. The public landing page explains the product; the app shows a wallet's own supported cards and loan activity.
+A clean, minimal interface for card-backed borrowing and lending. A simple three-sphere mark nods to the traditional pawnbroker sign; the product copy stays direct and trustworthy. The public landing page explains the product; the app shows a wallet's own supported cards and loan activity.
 
-**Name:** Prawn Shop
+**Name:** Pawn Shop
 **Tagline:** Keep your cards. Access their value.
 
 ## Type
@@ -14,7 +14,7 @@ IBM Plex Sans is loaded through `next/font` with `display: swap`.
 
 ## Color roles
 
-CSS custom properties in `src/app/globals.css` are the source of truth. `--background` is a cool near-white; `--card` is white; `--foreground` is deep graphite; `--primary` is dark teal; `--accent` is soft mint; `--border` is a cool gray line. Dark mode keeps the same graphite and teal relationship. A warm coral is reserved for the prawn mark and favicon so the lending controls remain visually consistent.
+CSS custom properties in `src/app/globals.css` are the source of truth. `--background` is a cool near-white; `--card` is white; `--foreground` is deep graphite; `--primary` is dark teal; `--accent` is soft mint; `--border` is a cool gray line. Dark mode keeps the same graphite and teal relationship. The mark and favicon use dark teal with a restrained brass accent.
 
 ## Components and copy
 

@@ -19,7 +19,7 @@ if (projectId && adapter) {
     networks: [sepolia],
     defaultNetwork: sepolia,
     metadata: {
-      name: "Prawn Shop",
+      name: "Pawn Shop",
       description: "Keep your cards. Access their value.",
       url: appUrl,
       icons: [new URL("/icon.svg", appUrl).toString()],

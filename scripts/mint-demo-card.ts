@@ -46,7 +46,7 @@ async function mintCard(certificationNumber: string): Promise<DemoCheckpoint> {
   if (!evidence) throw new Error(`Missing artwork for ${record.id}`);
   const metadata = {
     name: `${record.year} ${record.name} · ${record.setName} · ${record.grader} ${record.grade}`,
-    description: "Prawn Shop demonstration card. Custody receipt is simulated; no physical card is represented as held. Artwork illustrates the card printing only.",
+    description: "Pawn Shop demonstration card. Custody receipt is simulated; no physical card is represented as held. Artwork illustrates the card printing only.",
     image: evidence.imageUrl,
     attributes: [
       { trait_type: "Printing", value: evidence.printing },

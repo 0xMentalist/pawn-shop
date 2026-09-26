@@ -35,5 +35,5 @@ export function hasVerifiedWorldCredential(
 }
 
 export function worldAuthorizationMessage(wallet: Address, nonce: string) {
-  return `Prawn Shop World ID authorization\nWallet: ${wallet.toLowerCase()}\nAction: ${WORLD_BORROWER_ACTION}\nRP nonce: ${nonce}\nChain: Sepolia (11155111)`;
+  return `Pawn Shop World ID authorization\nWallet: ${wallet.toLowerCase()}\nAction: ${WORLD_BORROWER_ACTION}\nRP nonce: ${nonce}\nChain: Sepolia (11155111)`;
 }

@@ -21,9 +21,9 @@ export function SiteHeader() {
   const landing = pathname === "/";
   return <header className="border-b border-border bg-card">
     <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3 md:px-6 lg:px-8">
-      <Link href="/" className="inline-flex min-h-10 items-center gap-3 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card" aria-label="Prawn Shop home">
+      <Link href="/" className="inline-flex min-h-10 items-center gap-3 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card" aria-label="Pawn Shop home">
         <BrandMark />
-        <span className="font-display text-lg font-semibold tracking-tight">Prawn Shop</span>
+        <span className="font-display text-lg font-semibold tracking-tight">Pawn Shop</span>
       </Link>
       {landing ? <nav aria-label="Main navigation" className="ml-auto flex items-center gap-3 sm:gap-6"><HowItWorksTrigger className="hidden min-h-10 items-center text-sm font-medium text-muted-foreground hover:text-foreground sm:inline-flex" /><Link href="/borrow" className={cn(buttonVariants({ size: "sm" }), "gap-2")}>Go to app<ArrowUpRight className="size-4" aria-hidden="true" /></Link></nav> : <>
         <div className="order-2 ml-auto flex items-center lg:order-3"><WalletButton /></div>

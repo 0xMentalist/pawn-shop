@@ -14,13 +14,13 @@ if (deployment.chainId !== sepolia.id || !currency || !pool) throw new Error("Se
 const rpc = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL;
 const client = createPublicClient({ chain: sepolia, transport: http(rpc) });
 const wallet = createWalletClient({ account, chain: sepolia, transport: http(rpc) });
-const target = 5_000_000_000n; // 5,000 valueless MockUSDC, enough for the 3,500 demo quote.
+const target = 11_000_000_000n; // Covers all five demo cards' maximum loans: 10,853.50 MockUSDC.
 const poolAbi = parseAbi([
   "function availableLiquidity() view returns (uint256)",
   "function balanceOf(address owner) view returns (uint256)",
   "function deposit(uint256 assets,address receiver) returns (uint256)",
 ]);
-const faucetAbi = parseAbi(["function faucet()"]);
+const faucetAbi = parseAbi(["function faucet()", "function nextFaucetAt(address) view returns (uint256)"]);
 
 async function confirm(hash: Hex, description: string) {
   const receipt = await client.waitForTransactionReceipt({ hash });
@@ -31,20 +31,26 @@ async function confirm(hash: Hex, description: string) {
 if (await client.getChainId() !== sepolia.id) throw new Error("RPC is not Sepolia");
 const current = await client.readContract({ address: pool, abi: poolAbi, functionName: "availableLiquidity" });
 if (current >= target) {
-  console.log(`Pool already has at least 5,000 MockUSDC of available liquidity.`);
+  console.log(`Pool already has at least 11,000 MockUSDC of available liquidity.`);
 } else {
   const needed = target - current;
   let balance = await client.readContract({ address: currency, abi: erc20Abi, functionName: "balanceOf", args: [account.address] });
   if (balance < needed) {
-    await confirm(await wallet.writeContract({ address: currency, abi: faucetAbi, functionName: "faucet" }), "Claim MockUSDC faucet");
-    balance = await client.readContract({ address: currency, abi: erc20Abi, functionName: "balanceOf", args: [account.address] });
-    if (balance < needed) throw new Error("Faucet balance is insufficient for the demo deposit");
+    const nextFaucetAt = await client.readContract({ address: currency, abi: faucetAbi, functionName: "nextFaucetAt", args: [account.address] });
+    const block = await client.getBlock();
+    if (block.timestamp >= nextFaucetAt) {
+      await confirm(await wallet.writeContract({ address: currency, abi: faucetAbi, functionName: "faucet" }), "Claim MockUSDC faucet");
+      balance = await client.readContract({ address: currency, abi: erc20Abi, functionName: "balanceOf", args: [account.address] });
+    }
   }
+  const depositAmount = balance < needed ? balance : needed;
+  if (depositAmount < 3_500_000_000n) throw new Error("At least 3,500 MockUSDC is needed to fund one capped demo loan");
   const allowance = await client.readContract({ address: currency, abi: erc20Abi, functionName: "allowance", args: [account.address, pool] });
-  if (allowance < needed) await confirm(await wallet.writeContract({ address: currency, abi: erc20Abi, functionName: "approve", args: [pool, needed] }), "Approve demo deposit");
-  await confirm(await wallet.writeContract({ address: pool, abi: poolAbi, functionName: "deposit", args: [needed, account.address] }), "Deposit demo liquidity");
+  if (allowance < depositAmount) await confirm(await wallet.writeContract({ address: currency, abi: erc20Abi, functionName: "approve", args: [pool, depositAmount] }), "Approve demo deposit");
+  await confirm(await wallet.writeContract({ address: pool, abi: poolAbi, functionName: "deposit", args: [depositAmount, account.address] }), "Deposit demo liquidity");
   const available = await client.readContract({ address: pool, abi: poolAbi, functionName: "availableLiquidity" });
   const shares = await client.readContract({ address: pool, abi: poolAbi, functionName: "balanceOf", args: [account.address] });
-  if (available < target || shares === 0n) throw new Error("Demo liquidity deposit did not reach its target");
+  if (available < current + depositAmount || shares === 0n) throw new Error("Demo liquidity deposit was not reflected in the pool");
   console.log(`Pool has ${available / 1_000_000n} MockUSDC available; deployer owns ${shares} pool share base units.`);
+  if (available < target) console.log(`The 11,000 MockUSDC target needs another faucet claim after its cooldown.`);
 }

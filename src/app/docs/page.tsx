@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "How it works" };
 const sections = [
   {
     title: "Borrow",
-    text: "See a card estimate and review the loan terms before connecting a wallet. The card owner verifies with World ID, accepts the offer, and receives test MockUSDC. Repaying returns the card to its owner.",
+    text: "Choose a card, see its test estimate, and review the loan terms before connecting a wallet. The card owner verifies with World ID, accepts the offer, and receives test MockUSDC. Repaying returns the card to its owner.",
     href: "/borrow",
     action: "Explore borrowing",
   },
@@ -39,6 +39,6 @@ export default function DocsPage() {
       <h2 className="text-xl font-semibold tracking-tight">World ID</h2>
       <p className="max-w-prose text-sm leading-7 text-muted-foreground">Choose Orb, NFC Passport, My Number Card, or Selfie Check when you accept a loan. Each method unlocks the same test offer. A connected wallet must own the card.</p>
     </section>
-    <p className="border-t border-border pt-6 text-sm leading-7 text-muted-foreground">Collector Credit runs on Sepolia with valueless test funds and a simulated vaulted card. Only the seeded card can be borrowed against in this version.</p>
+    <p className="border-t border-border pt-6 text-sm leading-7 text-muted-foreground">Collector Credit runs on Sepolia with valueless test funds and five simulated vaulted cards. Their estimates are fixed demo assumptions. A liquidated card cannot back another loan.</p>
   </main>;
 }

@@ -1,6 +1,6 @@
 # Collector Credit
 
-A Sepolia demo lending market for a simulated vaulted collectible card. The in-app [How it works](http://localhost:3000/docs) page covers the user flow; this README records the implementation and integration details. The interface uses Next.js 16, shadcn-style neutral components, Reown AppKit, Drizzle, and SQLite. Contracts use Hardhat 3 and OpenZeppelin. MockUSDC is a valueless test token; the seeded card is a simulated custody receipt.
+A Sepolia demo lending market for simulated vaulted collectible cards. The in-app [How it works](http://localhost:3000/docs) page covers the user flow; this README records the implementation and integration details. The interface uses Next.js 16, shadcn-style neutral components, Reown AppKit, Drizzle, and SQLite. Contracts use Hardhat 3 and OpenZeppelin. MockUSDC is a valueless test token; the seeded cards are simulated custody receipts.
 
 ## Local setup
 
@@ -39,13 +39,14 @@ pnpm deploy:sepolia
 
 `deploy:check` only reads the network and balance. `deploy:sepolia` sends transactions, saves checkpoints in `deployments/sepolia.json`, and fills public contract addresses in `.env.local`. Rerunning it resumes from the saved contracts. Restart Next.js after deployment so public addresses are included in the client bundle.
 
-Set `DEMO_BORROWER_ADDRESS` to the wallet that should own the sample card, then run:
+Set `DEMO_BORROWER_ADDRESS` to the wallet that should own the sample portfolio, then run:
 
 ```sh
 pnpm card:mint-demo
+pnpm card:mint-portfolio
 ```
 
-The mint script records `deployments/demo-card.json`, links the minted NFT to the SQLite card, and refreshes the demo valuation fixture. The NFT metadata explicitly describes simulated custody. `pnpm pool:seed-demo` idempotently funds the pool with 5,000 valueless MockUSDC from the Sepolia deployer so the 3,500 MockUSDC demo quote has liquidity. On the testnet deployment, the borrower or protocol admin can click **Advance demo loan to default** after origination. This charges full 90-day interest and makes the loan immediately default-eligible, allowing the three-minute auction to fit into a live walkthrough. The control is disabled when `LoanManager` is constructed with `demoMode=false`.
+The mint scripts record public checkpoints in `deployments/`, link the NFTs to SQLite cards, and refresh the demo valuation fixtures. Their metadata explicitly describes simulated custody. If a demo card is liquidated, rerunning its mint script creates a new fictional certificate; the liquidated token remains ineligible for another loan. `pnpm pool:seed-demo` targets 11,000 valueless MockUSDC, enough for all five maximum demo loans together. A fresh deployment may need a second faucet claim after the one-day cooldown to reach that target; the script deposits the available amount meanwhile. On the testnet deployment, the borrower or protocol admin can click **Advance demo loan to default** after origination. This charges full 90-day interest and makes the loan immediately default-eligible, allowing the three-minute auction to fit into a live walkthrough. The control is disabled when `LoanManager` is constructed with `demoMode=false`.
 
 ## ENSv2 identity and delegation on Sepolia
 
@@ -103,6 +104,6 @@ This is **read-only market context**. The signed loan valuation still comes from
 
 ## Guided borrower flow
 
-`/borrow` lets anyone preview the single minted sample card, request a `GET /api/demo-price?cardId=demo-charizard-001` test estimate, and review fixed Sepolia loan terms before connecting a wallet. The endpoint returns a **mock Realyse-style** response containing the $10,000 assumed value from SQLite, its original recorded timestamp, and a freshness flag. It does not call Realyse or invent sales evidence. The separate public Realyse data remains available from `/api/market-signal` for technical inspection.
+`/borrow` lets anyone select from five minted sample cards with fixed test values of $10, $1,000, $10,000, $25,000, and $100,000, request a `GET /api/demo-price?cardId=...` estimate, and review fixed Sepolia loan terms before connecting a wallet. Each endpoint response is **mock Realyse-style** and contains the value assumption from SQLite, its recorded timestamp, and a freshness flag. These values do not come from Realyse or real sales evidence. The separate public Realyse data remains available from `/api/market-signal` for technical inspection. Each loan is limited to 35% of its card's assumed value and capped at 3,500 MockUSDC; pool liquidity may limit simultaneous loans.
 
 The NFT owner may request a signed quote before World ID verification so they can inspect its terms. Origination still requires World eligibility and onchain checks. The valuation signer keeps its existing 24-hour fixture freshness rule; fetching the mock price does not update that timestamp. If the assumption is stale, the page says why a signed quote cannot be issued.

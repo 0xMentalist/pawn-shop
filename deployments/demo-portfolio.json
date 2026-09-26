@@ -1,0 +1,22 @@
+{
+  "card": "0xbd636cc5a919f63b10e20b5c0212081bb9b80ba1",
+  "borrower": "0xADc360fD724a714c585604389BC7dd07DB355Ee0",
+  "cards": {
+    "demo-pikachu-010": {
+      "tokenId": "3",
+      "txHash": "0xe34ccca2e1a1457ee3078dc7f5093d80c9525f08f6963486b2c4b4682e9b2e9b"
+    },
+    "demo-blastoise-1000": {
+      "tokenId": "4",
+      "txHash": "0xcf0d40450c7f55a7ceb51c78d1be1544835349c3ea89cd920d5c294aea66652e"
+    },
+    "demo-venusaur-25000": {
+      "tokenId": "5",
+      "txHash": "0x9bd0ee7509c93afd94ce2a50699016aeec560198e62287f91bd947bbf0f9763f"
+    },
+    "demo-charizard-100000": {
+      "tokenId": "6",
+      "txHash": "0xedaacf588d1ef9d5aed0c70b9ce0f10bce0cb22e83d99564c96c338ec21694e6"
+    }
+  }
+}

@@ -14,7 +14,7 @@ export class ValuationError extends Error {
 }
 
 export async function issueSignedValuation(cardId: string) {
-  const record = cardId === "demo-charizard-001" ? await getDemoCard() : null;
+  const record = await getDemoCard(cardId);
   if (!record || !record.valuation) throw new ValuationError(404, "Card or valuation fixture not found.");
   if (!record.card.tokenId || !record.card.tokenContract) throw new ValuationError(409, "The demo card must be minted on Sepolia before a signed valuation is available.");
   if (Date.now() - record.valuation.updatedAt.getTime() > MAX_VALUATION_AGE_MS) throw new ValuationError(410, "The comparable-sales fixture is stale. Update it before quoting.");

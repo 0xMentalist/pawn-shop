@@ -12,11 +12,24 @@ import { cardCustodyStatus } from "@/lib/card-custody";
 import type { DemoPrice } from "@/lib/demo-price";
 import { formatUsdc, GRACE_DAYS, maximumPrincipal, simpleInterest, TERM_DAYS } from "@/lib/loan-math";
 
-type Asset = { id: string; name: string; setName: string; year: number; grader: string; grade: string; certificationNumber: string; tokenId: string | null };
+type Asset = { id: string; name: string; setName: string; year: number; grader: string; grade: string; certificationNumber: string; tokenId: string | null; valueMicroUsdc: number };
 type WorldConfig = { appId: string; rpId: string; environment: "production" | "staging" } | null;
 const maximumDemoPrincipal = 3_500_000_000n;
 
-export function BorrowFlow({ asset, worldConfig }: { asset: Asset; worldConfig: WorldConfig }) {
+export function BorrowFlow({ assets, worldConfig }: { assets: Asset[]; worldConfig: WorldConfig }) {
+  const [selectedId, setSelectedId] = useState(assets.find((asset) => asset.id === "demo-charizard-001")?.id ?? assets[0]?.id);
+  const selected = assets.find((asset) => asset.id === selectedId) ?? assets[0];
+  return <div className="space-y-8">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">{assets.map((asset) => <button key={asset.id} type="button" aria-current={selected?.id === asset.id ? "true" : undefined} onClick={() => setSelectedId(asset.id)} className={`min-h-32 rounded-lg border p-3 text-left transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4 ${selected?.id === asset.id ? "border-foreground bg-secondary" : "border-border bg-card"}`}>
+      <span className="block text-sm font-semibold sm:text-base">{asset.year} {asset.name}</span>
+      <span className="mt-1 block text-xs text-muted-foreground">{asset.setName} · {asset.grader} {asset.grade}</span>
+      <span className="mt-4 block text-base font-semibold tabular-nums sm:text-xl">{formatUsdc(asset.valueMicroUsdc)}</span>
+    </button>)}</div>
+    {selected ? <BorrowDetail key={selected.id} asset={selected} worldConfig={worldConfig} /> : null}
+  </div>;
+}
+
+function BorrowDetail({ asset, worldConfig }: { asset: Asset; worldConfig: WorldConfig }) {
   const [view, setView] = useState<"card" | "offer">("card");
   const [price, setPrice] = useState<DemoPrice | null>(null);
   const [priceBusy, setPriceBusy] = useState(false);

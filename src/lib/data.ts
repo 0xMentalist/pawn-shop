@@ -3,12 +3,19 @@ import "server-only";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { cards, chainEvents, valuationFixtures } from "@/db/schema";
+import { DEMO_CARDS, isDemoCardId } from "@/lib/demo-cards";
 
-export async function getDemoCard() {
-  const [card] = await db.select().from(cards).where(eq(cards.id, "demo-charizard-001"));
+export async function getDemoCard(cardId = "demo-charizard-001") {
+  if (!isDemoCardId(cardId)) return null;
+  const [card] = await db.select().from(cards).where(eq(cards.id, cardId));
   if (!card) return null;
   const [valuation] = await db.select().from(valuationFixtures).where(eq(valuationFixtures.cardId, card.id));
   return { card, valuation: valuation ?? null };
+}
+
+export async function getDemoCards() {
+  const records = await Promise.all(DEMO_CARDS.map((card) => getDemoCard(card.id)));
+  return records.flatMap((record) => record?.valuation ? [{ card: record.card, valuation: record.valuation }] : []);
 }
 
 export async function getActivity() {

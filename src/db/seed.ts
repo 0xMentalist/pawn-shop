@@ -3,34 +3,37 @@ import { drizzle } from "drizzle-orm/libsql";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { cards, valuationFixtures } from "./schema";
+import { DEMO_CARDS } from "../lib/demo-cards";
 
 const url = process.env.DATABASE_URL ?? "file:./data/collector-credit.db";
 if (url.startsWith("file:")) mkdirSync(dirname(resolve(url.slice(5))), { recursive: true });
 const client = createClient({ url });
 const db = drizzle(client);
 
-await db.insert(cards).values({
-  id: "demo-charizard-001",
-  name: "Charizard",
-  setName: "Base Set",
-  year: 1999,
-  grader: "PSA",
-  grade: "9",
-  certificationNumber: "DEMO-CC-001",
-  custodyStatus: "simulated_received",
-  tokenId: null,
-  tokenContract: null,
-  imageUrl: null,
-}).onConflictDoNothing();
+for (const card of DEMO_CARDS) {
+  await db.insert(cards).values({
+    id: card.id,
+    name: card.name,
+    setName: card.setName,
+    year: card.year,
+    grader: card.grader,
+    grade: card.grade,
+    certificationNumber: card.certificationNumber,
+    custodyStatus: "simulated_received",
+    tokenId: null,
+    tokenContract: null,
+    imageUrl: null,
+  }).onConflictDoNothing();
 
-await db.insert(valuationFixtures).values({
-  cardId: "demo-charizard-001",
-  lastSaleMicroUsdc: 10_400_000_000,
-  median30dMicroUsdc: 10_250_000_000,
-  appraisedMicroUsdc: 10_000_000_000,
-  confidence: "medium",
-  updatedAt: new Date(),
-}).onConflictDoNothing();
+  await db.insert(valuationFixtures).values({
+    cardId: card.id,
+    lastSaleMicroUsdc: card.valueMicroUsdc,
+    median30dMicroUsdc: card.valueMicroUsdc,
+    appraisedMicroUsdc: card.valueMicroUsdc,
+    confidence: "medium",
+    updatedAt: new Date(),
+  }).onConflictDoNothing();
+}
 
 await client.close();
-console.log("Seeded the simulated card and valuation fixture.");
+console.log("Seeded the simulated card portfolio and valuation fixtures.");
